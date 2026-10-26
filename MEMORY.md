@@ -14,6 +14,16 @@ BOX에 매일 올라오는 CMP 장치 Job 로그(CSV)를 GAS로 자동 취합하
 - 코드·MEMORY.md는 저장소 `tsrinte/GAS`에 바로 반영한다.
 - 1차 분석: 10/07 이후, 테이블(A,B,C,D)별 처리 웨이퍼 매수 + 슬러리 사용 유무 + Pad 온도 + 드레서 토크를 한 화면에서. 최종적으로는 모든 Caption 항목 누적.
 
+## 추가 결정 (2026-10-26, 2차 답변)
+- **표시명은 일본어 Caption 그대로** 사용 (한글 매핑 안 함). UI 라벨도 장치 Caption 기준.
+- **Sequence 시트 기준점 = Step5의 Set 값** (P/T=`処理時間` Set Step5, TT=`T.T. 回転数` Set Step5 등). 기준 Step은 드롭다운으로 변경 가능.
+- **Wfs(웨이퍼 수)** = Job.csv의 `Wafers` 열. 검증용으로 Summary의 SystemLotID ↔ SystemWaferID 건수를 대조.
+- **슬러리 사용 판정/유량 적산**: `ﾗｲﾝ A 選択` / `ﾗｲﾝ D 選択`의 Set이 `供給`인 Step에 대해, 해당 라인 `ﾗｲﾝA 供給流量` / `ﾗｲﾝD 供給流量`의 Act(mL/min) × `処理時間` Act(s)/60을 합산 → 총 유량(mL). 기본 Step1~5, 유저가 Step 범위를 드롭다운으로 선택(예: Step1~6, 2~7).
+- **대시보드**: 고정 항목 외에 모든 Caption을 드롭다운/태그로 골라 날짜별 누적·추이를 볼 수 있게 한다. 기본 표시는 테이블(A~D)별 매수·슬러리·Pad温度·드레서 값, 10/07 이후.
+- 테이블 A~D는 레시피 형식이 동일 (섹션명의 `PolisherD`처럼 폴리셔 문자만 다름).
+- BOX Client ID/Secret은 새로 발급 (기존 자동화와 분리). 시크릿은 스크립트 속성에만 저장, 대화·저장소에 넣지 않는다.
+- 규모: 하루 상세 CSV 약 30~400개 → 증분 처리 + 6분 실행 제한 대응(배치/이어서 실행) 필요.
+
 ## BOX 폴더 구조
 Main/Project/Log(이름 가변)/Start Log/일별로그/날짜폴더(1010 등)/
 - `CJ_..._(링크번호)` 폴더 안에 웨이퍼별 상세 CSV `ProcessLog_<Carrier>.<Slot>_<C#W##>_<SystemWaferID>.csv`
@@ -33,4 +43,4 @@ Main/Project/Log(이름 가변)/Start Log/일별로그/날짜폴더(1010 등)/
 사람이 수동 입력하는 시트. 열: Date, Event, Carrier, Slot, Film, Wfs, D/M, TotalRecipe, Route, ME Recipe, Remark, Side, P/T, TT Rot, TR Rot, DR Rot/Load, A1P~A8P, RRP, Slurry, Ex-situ Dress 등. 파란 셀 부분을 로그에서 채워 행 사이사이에 insert하는 것이 목표.
 
 ## 단계(Step) 진행 상황
-- Step1: 요구사항·데이터 구조 파악 (진행 중, 샘플 확인 완료)
+- Step2 이후: BOX OAuth2 → 파서 → Process_Total 저장 → 대시보드 → Sequence 삽입 (순서 확정 전, 사용자와 협의 중)
