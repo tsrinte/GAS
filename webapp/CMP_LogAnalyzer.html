@@ -1,0 +1,811 @@
+<title>CMP ログ分析</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* Layout: 上部タブ / ダッシュボード = フィルタバー → [左: テーブルカード・項目別日次推移・乖離表 | 右: 消耗品カウンタ] / Sequence 挿入 = 左右比較 / ログ取込 = 取込元と照合結果 */
+:root{
+  --bg:#f3f5f7; --panel:#ffffff; --ink:#18232d; --mute:#5f6e7b; --line:#dbe1e7; --sel:#e8f1f8;
+  --accent:#0b6e8a; --accent-ink:#ffffff; --accent-soft:#dcf0f5;
+  --good:#1d7a4d; --good-soft:#dff3e8; --warn:#a85500; --warn-soft:#fdeed9; --crit:#b3261e; --crit-soft:#fbe3e1;
+  --tA:#0b6e8a; --tB:#6a4fb3; --tC:#c2630f; --tD:#2b8a57;
+  --sans:"Noto Sans JP","Hiragino Sans","Yu Gothic","Meiryo",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Consolas,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f161c; --panel:#17212a; --ink:#e4ebf0; --mute:#92a1ad; --line:#2a3743; --sel:#1b3240;
+  --accent:#4fb8d4; --accent-ink:#0f161c; --accent-soft:#123a47; --good:#5cc592; --good-soft:#143326; --warn:#f0a850; --warn-soft:#3b2a12; --crit:#ff8a80; --crit-soft:#401c19;
+  --tA:#4fb8d4; --tB:#a995e6; --tC:#f0a05a; --tD:#5cc592; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161c; --panel:#17212a; --ink:#e4ebf0; --mute:#92a1ad; --line:#2a3743; --sel:#1b3240;
+  --accent:#4fb8d4; --accent-ink:#0f161c; --accent-soft:#123a47; --good:#5cc592; --good-soft:#143326; --warn:#f0a850; --warn-soft:#3b2a12; --crit:#ff8a80; --crit-soft:#401c19;
+  --tA:#4fb8d4; --tB:#a995e6; --tC:#f0a05a; --tD:#5cc592; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;margin:0;
+  padding-block:0 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1440px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:16px 0 12px}
+h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.02em}
+.badge{font-size:11px;padding:2px 8px;border-radius:4px;font-weight:700;background:var(--warn-soft);color:var(--warn)}
+.badge.real{background:var(--good-soft);color:var(--good)}
+nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+nav button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--mute);padding:6px 14px;cursor:pointer;border-radius:4px}
+nav button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;background:var(--panel);border:1px solid var(--line);padding:12px 14px;border-radius:6px;margin-bottom:16px}
+.f{display:flex;flex-direction:column;font-size:11px;color:var(--mute);gap:3px}
+.f>span.inl{display:flex;gap:4px;align-items:center}
+select,input[type=date],input[type=number]{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:5px 8px;max-width:100%}
+input[type=number]{width:84px}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font:inherit;border:1.5px solid var(--c);color:var(--c);background:transparent;padding:4px 12px;border-radius:99px;cursor:pointer;font-weight:700}
+.tag[aria-pressed="true"]{background:var(--c);color:var(--panel)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 470px;gap:16px;align-items:start}
+@media(max-width:1180px){.grid{grid-template-columns:minmax(0,1fr)}}
+section.p{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin-bottom:16px;min-width:0}
+.sh{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:end;justify-content:space-between;margin-bottom:10px}
+h2{font-size:14px;margin:0;font-weight:700;letter-spacing:.03em}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
+.card{border:1px solid var(--line);border-top:3px solid var(--c);border-radius:4px;padding:10px 12px;min-width:0;display:flex;flex-direction:column;gap:2px}
+.card h3{margin:0 0 4px;font-size:15px;display:flex;justify-content:space-between;align-items:center;color:var(--c)}
+.kv{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:3px 4px;font-size:13px;border-radius:3px}
+.kv>span{color:var(--ink);min-width:0}
+.kv b{font-family:var(--mono);font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums}
+.kv i{font-style:normal;color:var(--mute);font-size:11px;margin-left:2px}
+.kv.sub{font-size:11px;color:var(--mute);padding-top:0}
+.kv.sub b{font-size:11px;color:var(--mute)}
+.kv.hl{background:var(--warn-soft)}
+.kv.hl b{color:var(--crit)}
+.kv.hl b::after{content:" ▲";font-size:9px}
+.kv.ex{border-top:1px dashed var(--line);margin-top:2px;padding-top:5px}
+.big{font-family:var(--mono);font-size:26px;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums}
+.big small{font-size:12px;color:var(--mute);margin-left:4px;font-family:var(--sans)}
+.big.hl{color:var(--crit)}
+.chk-line{font-size:11px;margin-top:4px}
+.ok{color:var(--good)} .ng{color:var(--crit)}
+.xbtn{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:11px;font-weight:700;color:var(--good);background:var(--good-soft);border:1px solid transparent;border-radius:4px;padding:3px 8px;cursor:pointer}
+.xbtn:hover{border-color:var(--good)}
+.xbtn svg{width:15px;height:15px;flex:none}
+.note{font-size:12px;color:var(--mute);margin:8px 0 0}
+.chartwrap{position:relative;overflow-x:auto}
+.chartwrap svg text{font-family:var(--mono);font-size:10px;fill:var(--mute)}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.15);border-radius:4px;padding:6px 9px;font-size:12px;min-width:150px;z-index:5}
+.tip b{font-family:var(--mono);font-weight:500}
+.legend{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px}
+.lg{font:inherit;font-size:12px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:99px;padding:3px 12px;cursor:pointer}
+.lg::before{content:"";width:14px;height:3px;background:var(--c);border-radius:2px}
+.lg[aria-pressed="false"]{opacity:.4;text-decoration:line-through}
+.lg.flag{border-color:var(--crit);color:var(--crit)}
+.tw{overflow:auto;max-width:100%}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:5px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{color:var(--mute);font-weight:500;font-size:12px;background:var(--panel)}
+td{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.l{text-align:left!important}
+td.l{font-family:var(--sans)}
+tr.dev td{background:var(--crit-soft)}
+.pill{font-family:var(--sans);font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;display:inline-block}
+.pill.crit{background:var(--crit);color:var(--panel)}
+.pill.ok{background:var(--good-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.cnt td,.cnt th{padding:5px 6px;font-size:12px}
+.cnt td.l{white-space:normal;line-height:1.3;min-width:120px}
+.cnt td small{display:block;color:var(--mute);font-size:10px}
+.cnt td.hl{background:var(--warn-soft);color:var(--crit)}
+.cnt th.tcol{color:var(--c);font-weight:700}
+.btn{font:inherit;font-weight:700;border:0;background:var(--accent);color:var(--accent-ink);padding:7px 14px;border-radius:4px;cursor:pointer}
+.btn.sec{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.split{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:1100px){.split{grid-template-columns:minmax(0,1fr)}}
+.drop{border:2px dashed var(--line);border-radius:6px;transition:border-color .15s,background .15s}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.seqbox{max-height:560px}
+.seq th{position:sticky;top:0;z-index:1;font-size:11px;text-align:center;white-space:pre-line}
+.seq tr.h2 th{top:var(--h1h,26px)}
+.seq td{font-size:12px;padding:4px 7px;cursor:pointer}
+.seq td.rn,.seq th.rn{color:var(--mute);font-size:10px;text-align:right;position:sticky;left:0;background:var(--panel)}
+.seq tbody tr:hover td{background:var(--sel)}
+.seq tr.selrow td{background:var(--sel);box-shadow:inset 0 2px 0 var(--accent),inset 0 -2px 0 var(--accent)}
+.seq tr.ins td{background:var(--accent-soft)}
+.seq tr.da td{box-shadow:inset 0 3px 0 var(--accent)}
+.seq tr.db td{box-shadow:inset 0 -3px 0 var(--accent)}
+.cand td{font-size:12px;padding:4px 7px}
+.cand tr[draggable="true"]{cursor:grab}
+.cand tr.used td{color:var(--mute)}
+.cand td.k{background:var(--accent-soft);color:var(--accent)}
+.row{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:6px;font-size:13px;z-index:20;max-width:90vw}
+.src{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.srcc{border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.srcc h3{margin:0;font-size:14px}
+.srcc p{margin:0;font-size:12px;color:var(--mute)}
+.dz{padding:22px 12px;text-align:center;color:var(--mute);font-size:13px}
+details summary{cursor:pointer;font-size:12px;color:var(--accent);font-weight:700}
+.prog{font-size:12px;color:var(--accent);font-weight:700}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>CMP Process Log 分析</h1><span class="badge" id="srcBadge">サンプルデータ表示中</span>
+  <nav aria-label="画面切替">
+    <button data-v="dash" aria-pressed="true">ダッシュボード</button>
+    <button data-v="seq" aria-pressed="false">Sequence 挿入</button>
+    <button data-v="log" aria-pressed="false">ログ取込</button>
+  </nav>
+</header>
+<p class="note" id="sandboxNote" hidden style="margin:-4px 0 12px">このプレビュー画面ではファイル保存がブロックされます。配布版の HTML ファイル(PC で開くもの)では Excel 保存がそのまま動きます。</p>
+
+<!-- ================= ダッシュボード ================= -->
+<div id="v-dash">
+<div class="bar">
+  <label class="f">期間 開始<input type="date" id="d0"></label>
+  <label class="f">期間 終了<input type="date" id="d1"></label>
+  <div class="f">集計 Step(スラリ)<span class="inl"><select id="s0" aria-label="開始 Step"></select>〜<select id="s1" aria-label="終了 Step"></select></span></div>
+  <label class="f">ダミー(DMY)<select id="dmy"><option value="0">枚数に含めない</option><option value="1">含める</option></select></label>
+  <div class="f">テーブル<div class="tags" id="tags"></div></div>
+  <div style="margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+    <span class="note" style="margin:0" id="lastInfo"></span>
+    <button class="xbtn" id="expAll" title="全テーブルの集計を Excel で出力"></button>
+  </div>
+</div>
+
+<div class="grid"><main style="min-width:0">
+  <section class="p">
+    <div class="sh"><h2>テーブル別コンディション</h2>
+      <div class="row">
+        <label class="f">ドレッサー項目<select id="drKey"></select></label>
+        <label class="f">追加項目 1<select id="ex1"></select></label>
+        <label class="f">追加項目 2<select id="ex2"></select></label>
+        <label class="f">追加項目 3<select id="ex3"></select></label>
+      </div></div>
+    <div class="cards" id="cards"></div>
+    <p class="note">スラリ総流量(A/D…)= ﾗｲﾝ ○ 選択 が「供給」の Step だけを対象に、Σ(ﾗｲﾝ○ 供給流量 Act × 処理時間 Act ÷ 60)。ライン記号は Caption から自動取得します。スラリ使用枚数は A・D 同時供給でも 1 枚。Act が空欄の Step は 0 として計算します。<br>
+    Pad初期－現在Pad厚み差分:Pad P.S時高さ(ﾊﾟｯﾄﾞｻｰﾁ時ﾊﾟｯﾄﾞ.高さ)− Pad厚みセンサー の値を適用(各 Act 値、期間内の最新ウェーハ)。<br>
+    <span style="color:var(--crit)">▲</span> はテーブル間の平均から ±10% 以上離れた値です。</p>
+  </section>
+
+  <section class="p">
+    <div class="sh"><h2>項目別日次推移</h2>
+      <div class="row">
+        <label class="f">項目<select id="cap" style="max-width:300px"></select></label>
+        <label class="f">値の種類<select id="kind"></select></label>
+        <label class="f">日次集計<select id="agg"><option value="avg">日平均</option><option value="sum">日合計</option><option value="max">最大</option><option value="min">最小</option></select></label>
+        <label class="f">縦軸<select id="ymode"><option value="auto">自動(差を拡大)</option><option value="zero">0 から</option><option value="man">手動</option></select></label>
+        <span class="f" id="ymanBox" hidden>範囲<span class="inl"><input type="number" id="ymin" step="any" aria-label="縦軸 最小">〜<input type="number" id="ymax" step="any" aria-label="縦軸 最大"></span></span>
+        <label class="f">グラフの高さ<input type="range" id="yh" min="180" max="560" step="20" value="300"></label>
+      </div></div>
+    <div class="chartwrap" id="chartWrap"><svg id="chart" width="100%" role="img" aria-label="項目別日次推移グラフ"></svg><div class="tip" id="tip" hidden></div></div>
+    <div class="legend" id="legend"></div>
+    <p class="note">赤い丸印は、その日のテーブル間平均から ±10% 以上離れた点です。マウスを重ねると値と差が出ます。凡例をクリックするとテーブルを外したり戻したりできます。</p>
+  </section>
+
+  <section class="p">
+    <div class="sh"><h2>Set と Act の乖離(±10% 以上を強調)</h2>
+      <div class="row"><label class="f">項目<select id="devCap"><option value="">すべて</option></select></label><label style="font-size:12px"><input type="checkbox" id="devEp" checked> EP 上限時間(処理時間 Set 999.9)を除外</label><span class="note" id="devCount" style="margin:0"></span></div></div>
+    <div class="tw" style="max-height:360px"><table><thead><tr><th class="l">日付</th><th class="l">テーブル</th><th class="l">項目</th><th>Step</th><th>Set</th><th>Act</th><th>乖離</th><th class="l">CJ / ウェーハ</th></tr></thead><tbody id="dev"></tbody></table></div>
+  </section>
+</main>
+
+<aside style="min-width:0">
+  <section class="p">
+    <div class="sh"><h2>消耗品カウンタ</h2></div>
+    <div class="row" style="margin-bottom:8px">
+      <label class="f">対象日 開始<select id="c0"></select></label>
+      <label class="f">対象日 終了<select id="c1"></select></label>
+      <button class="xbtn" id="expCnt" title="消耗品カウンタを Excel で出力"></button>
+    </div>
+    <div class="tw"><table class="cnt"><thead id="cntHead"></thead><tbody id="cnts"></tbody></table></div>
+    <p class="note" id="cntNote"></p>
+    <div class="sh" style="margin-top:14px"><h2 style="font-size:13px">テーブル別 比較</h2>
+      <div class="row"><label class="f">項目<select id="barItem"></select></label>
+      <label class="f">表示<select id="barMode"><option value="v">現在値</option><option value="d">期間増分</option></select></label></div></div>
+    <svg id="bars" viewBox="0 0 430 210" width="100%" role="img" aria-label="テーブル別棒グラフ"></svg>
+  </section>
+</aside></div>
+</div>
+
+<!-- ================= Sequence 挿入 ================= -->
+<div id="v-seq" hidden>
+ <div class="bar">
+   <div class="f">Original Sequence(PC のファイル)<span class="inl"><button class="btn sec" id="seqOpenBtn">ファイルを開く</button><input type="file" id="seqFile" accept=".xlsx,.xlsm" hidden><span id="seqName" style="font-size:13px;color:var(--ink)"></span></span></div>
+   <label class="f">シート<select id="seqSheet"></select></label>
+   <label class="f">基準 Step(Main Polish)<select id="seqStep"></select></label>
+   <span class="f">Ex-situ Dress Step<span id="dressStep" style="font-size:13px;color:var(--ink)">自動(D.R. 押付荷重 Set &gt; 0)</span></span>
+   <button class="btn" id="seqSave" style="margin-left:auto">別名で保存(.xlsx)</button>
+ </div>
+ <div class="split">
+  <section class="p drop" id="seqDrop">
+    <div class="sh"><h2>Original Sequence</h2>
+      <div class="row"><button class="btn sec" id="insUp" disabled>▲ 選択行の上に挿入</button><button class="btn sec" id="insDn" disabled>▼ 選択行の下に挿入</button><button class="btn sec" id="undo" disabled>元に戻す</button></div></div>
+    <p class="note" style="margin:0 0 8px" id="seqHint">行をクリックして挿入位置を選びます。右の行をドラッグして、左の行の上半分(上に挿入)か下半分(下に挿入)にドロップすることもできます。.xlsx ファイルをここへドロップしても開けます。</p>
+    <div class="tw seqbox"><table class="seq" id="seqTbl"></table></div>
+  </section>
+  <section class="p">
+    <div class="sh"><h2>挿入候補(取込データ)</h2><span class="note" style="margin:0" id="candInfo"></span></div>
+    <div class="row" style="margin-bottom:8px"><label style="font-size:12px"><input type="checkbox" id="candAll"> すべて選択</label><span class="note" style="margin:0">チェックした行だけが挿入されます</span></div>
+    <div class="tw seqbox"><table class="cand" id="candTbl"></table></div>
+    <details style="margin-top:10px"><summary>マッピング(どの Caption をどの列に入れるか)</summary><div class="tw"><table id="mapTbl"></table></div></details>
+  </section>
+ </div>
+</div>
+
+<!-- ================= ログ取込 ================= -->
+<div id="v-log" hidden>
+ <section class="p">
+  <div class="sh"><h2>取込元</h2><span class="prog" id="prog"></span></div>
+  <div class="src">
+   <div class="srcc drop" id="logDrop">
+     <h3>PC のフォルダ</h3>
+     <p>日付フォルダ(例:1022)や、その上の Start Log フォルダを指定すると、中の ProcessLog_Job / Summary / 各 CJ フォルダの CSV を自動で読み込みます。</p>
+     <div class="row"><button class="btn" id="pickDir">フォルダを選択</button><button class="btn sec" id="pickFiles">ファイルを選択</button></div>
+     <input type="file" id="dirIn" webkitdirectory directory multiple hidden><input type="file" id="filesIn" multiple accept=".csv,.cvs,.xlsx" hidden>
+     <div class="dz">ここにフォルダやファイルをドロップ</div>
+   </div>
+   <div class="srcc">
+     <h3>BOX</h3>
+     <p>BOX の Log フォルダを定時に自動取込します(OAuth2)。次の Step で接続します。</p>
+     <div class="row"><button class="btn" disabled>BOX に接続</button></div>
+   </div>
+   <div class="srcc">
+     <h3>集計データ(Process_Total)</h3>
+     <p>取り込んだ全データを Excel に保存します。10MB を超える場合は _1, _2 … に分けて保存します。保存したファイルを左の枠にドロップすると、続きから集計できます。</p>
+     <div class="row"><button class="btn" id="saveTotal">Process_Total を保存</button><button class="btn sec" id="loadSample">サンプルに戻す</button></div>
+   </div>
+  </div>
+ </section>
+ <section class="p">
+  <div class="sh"><h2>取込結果と照合</h2><span class="note" style="margin:0" id="logSum"></span></div>
+  <div class="tw"><table><thead><tr><th class="l">フォルダ</th><th>Job 行</th><th>Job Wafers 合計</th><th>Summary 行</th><th>詳細 CSV</th><th>Job と紐付け</th><th class="l">照合</th></tr></thead><tbody id="logTbl"></tbody></table></div>
+  <p class="note">照合:Job.csv の Wafers 合計、Summary の行数、詳細 CSV の数が一致すれば ✓。一致しない場合は不足しているファイルを確認してください。</p>
+  <div id="errBox"></div>
+ </section>
+</div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script>
+// ===================== CORE-BEGIN =====================
+const norm=s=>String(s??'').normalize('NFKC').replace(/\s+/g,'').toLowerCase();
+const isNum=v=>typeof v==='number'&&isFinite(v);
+const n0=v=>isNum(v)?v:0;
+const isSupply=v=>typeof v==='string'&&/^(供給|supply|on)$/i.test(v.normalize('NFKC').trim());
+const RE={
+  time:/^(処理時間|processtime)$/, tt:/^t\.t\.回転数$/, tr:/^t\.r\.回転数$/, trDist:/^t\.r\.揺動距離$/, trSpd:/^t\.r\.揺動速度$/,
+  drScan:/^d\.r\.スキャン選択$/, drCount:/^d\.r\.揺動優先回数$/, drRot:/^d\.r\.回転数$/, drLoad:/^d\.r\.押付荷重$/, drOsc:/^d\.r\.揺動選択$/, drDiw:/^d\.r\.純水流量$/,
+  lineSel:/^(?:ライン|line)([a-z])(?:選択|select)/, lineFlow:/^(?:ライン|line)([a-z])(?:供給流量|flow)/,
+  padT:/^pad温度$|^padtemp/, padH:/パッドサーチ.*高さ|padsearch.*height|p\.?s\.?時.*高さ/, padThk:/^(?:pad|パッド)厚みセンサ|padthickness/,
+  rrp:/^リテーナリング面圧$|^retainerring(press|pressure)$/
+};
+const areaRe=n=>new RegExp('^エリア'+n+'エアバッグ圧力$');
+
+function decodeBuf(buf){try{return new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch(e){return new TextDecoder('shift_jis').decode(buf)}}
+function parseCSV(t){t=t.replace(/^﻿/,'');const rows=[];let row=[],f='',q=false;
+  for(let i=0;i<t.length;i++){const c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true; else if(c===','){row.push(f);f=''}
+    else if(c==='\n'){row.push(f);rows.push(row);row=[];f=''} else if(c!=='\r')f+=c}
+  if(f!==''||row.length){row.push(f);rows.push(row)}return rows}
+function num(v){if(v==null)return null;const s=String(v).trim();if(s==='')return null;const n=Number(s);return isFinite(n)?n:s}
+function ymd(s){const m=/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/.exec(s||'');return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:''}
+function parseTable(text){const rows=parseCSV(text);if(!rows.length)return[];const h=rows[0].map(c=>c.trim());
+  return rows.slice(1).filter(r=>r.some(c=>c.trim())).map(r=>Object.fromEntries(h.map((k,i)=>[k,(r[i]??'').trim()])))}
+const pick=(o,...ks)=>{for(const k of ks)if(o[k]!=null&&o[k]!=='')return o[k];return''};
+function parseJob(text,folder){return parseTable(text).map(r=>({sysLot:pick(r,'SystemLotID'),carrier:pick(r,'Carrier'),lotId:pick(r,'LotID'),cj:pick(r,'CJID'),recipe:pick(r,'TotalRecipe'),
+  list:pick(r,'SystemWaferList').split(/[;|]/).map(s=>s.trim()).filter(Boolean),port:pick(r,'Port'),wafers:+pick(r,'Wafers')||0,state:pick(r,'State'),start:pick(r,'StartingTime'),end:pick(r,'EndingTime'),folder}))}
+function parseSummary(text,folder){return parseTable(text).map(r=>({wid:pick(r,'SystemWaferID'),sysLot:pick(r,'SystemLotID'),pos:pick(r,'取出位置'),route:pick(r,'プロセスルート'),folder}))}
+
+function parseDetail(text,name){
+  const rows=parseCSV(text);const w={file:name,info:{},steps:{},common:{},polisher:''};
+  let hdr=null,sec=null,ix=null;
+  for(const r of rows){
+    if(!r.some(c=>c.trim()!=='')){hdr=null;continue}
+    if((r[1]||'').trim()==='SystemOrder'){sec=r[0].trim();hdr=r.map(c=>c.trim());
+      const f=ns=>hdr.findIndex(h=>ns.includes(h));
+      ix={cat:f(['SystemCategroy','SystemCategory']),cap:f(['Caption','Item','Title']),unit:f(['Unit']),val:f(['Value']),steps:[]};
+      hdr.forEach((h,i)=>{const m=/^Step(\d+)$/i.exec(h);if(m)ix.steps.push([+m[1],i])});
+      const pm=/^Polisher([A-Z])_/i.exec(sec);if(pm)w.polisher=pm[1].toUpperCase();continue}
+    if(!hdr||r[0].trim()!==sec||ix.cap<0)continue;
+    const cap=(r[ix.cap]||'').trim();if(!cap)continue;
+    if(sec==='WaferInfo'){w.info[cap]=(r[ix.val]||'').trim();continue}
+    const sk=sec.replace(/^Polisher[A-Z]_/i,'Polisher_');
+    let cat=(ix.cat>=0?r[ix.cat]:'').trim();cat=cat?cat[0].toUpperCase()+cat.slice(1).toLowerCase():'Act';
+    const unit=ix.unit>=0?(r[ix.unit]||'').trim():'';
+    if(ix.steps.length){const key=sk+'|'+cap;const o=w.steps[key]||(w.steps[key]={sec:sk,cap,unit});
+      const arr=[];for(const[n,i]of ix.steps)arr[n-1]=num(r[i]);o[cat]=arr;if(unit&&!o.unit)o.unit=unit}
+    else if(ix.val>=0){const key=sk+'|'+cap;w.common[key]={sec:sk,cap,unit,cat,value:num(r[ix.val])}}
+  }
+  return finalizeWafer(w);
+}
+function finalizeWafer(w){
+  const I=w.info,g=(...ks)=>pick(I,...ks);
+  const base=(w.file||'').split('/').pop();
+  const fm=/ProcessLog_(.+?)\.(\d+)_(C\d+W\d+)_(\d+)/i.exec(base);
+  w.id=w.id||(fm?fm[4]:((/_(\d+)(?:_[^_]*)?\.csv$/i.exec(base)||[])[1]||base));
+  w.carrier=w.carrier||g('キャリアID','CarrierID')||(fm?fm[1]:'');
+  w.slot=w.slot||(fm?fm[2]:'');
+  w.pos=w.pos||g('取出位置','SourcePosition')||(fm?fm[3]:'');
+  w.cj=w.cj||g('コントロールジョブID','ControlJobID');w.pj=w.pj||g('プロセスジョブID','ProcessJobID');
+  w.lot=w.lot||g('ロットID','LotID');w.recipe=w.recipe||g('全体レシピID','RecipeID','TotalRecipe');
+  w.route=w.route||g('プロセスルート','ProcessRoute');w.croute=w.croute||g('クリーナルート','CleanerRoute');
+  w.status=w.status||g('プロセスステータス','ProcessStatus');w.start=w.start||g('開始時刻','StartTime');w.end=w.end||g('終了時刻','EndTime');
+  w.date=w.date||ymd(w.start);
+  w.table=w.table||(((/Table\s*([A-Z])/i.exec(w.route)||[])[1]||w.polisher||'?').toUpperCase());
+  w.polisher=w.polisher||w.table;
+  w._f={};w._v={};
+  const t=findStep(w,RE.time);w.nSteps=0;
+  if(t){const s=t.Set||[],a=t.Act||[];for(let i=0;i<Math.max(s.length,a.length);i++)if(n0(s[i])>0||n0(a[i])>0)w.nSteps=i+1}
+  w.lines={};
+  for(const k in w.steps){const o=w.steps[k];if(!o.sec.startsWith('Polisher_'))continue;const c=norm(o.cap);
+    let m=RE.lineSel.exec(c);if(m){(w.lines[m[1].toUpperCase()]??={}).sel=o.Set||o.Act||[]}
+    m=RE.lineFlow.exec(c);if(m){(w.lines[m[1].toUpperCase()]??={}).flow=o}}
+  const anySupply=Object.values(w.lines).some(l=>(l.sel||[]).some(isSupply));
+  w.dummy=!anySupply||/DMY|dummy/i.test(w.lot+' '+w.pj+' '+w.recipe);
+  w.key=w.id+'|'+w.start;
+  return w;
+}
+function findStep(w,re,pre='Polisher_'){const ck=re.source+pre;if(ck in w._f)return w._f[ck];
+  let hit=null;for(const k in w.steps){const o=w.steps[k];if(o.sec.startsWith(pre)&&re.test(norm(o.cap))){hit=o;break}}return w._f[ck]=hit}
+function timeAct(w){return(findStep(w,RE.time)||{}).Act||[]}
+function stepValue(w,key,kind){const o=w.steps[key];if(!o||!o[kind])return null;const ck=key+'#'+kind;if(ck in w._v)return w._v[ck];
+  const a=o[kind],s=o.Set,ta=timeAct(w),hasSet=Array.isArray(s)&&s.some(v=>isNum(v)&&v!==0);const n=Math.max(w.nSteps,a.length);const vals=[];
+  for(let i=0;i<n;i++){const v=a[i];if(!isNum(v))continue;
+    if(hasSet){if(isNum(s[i])&&s[i]!==0)vals.push(v)} else if(i<w.nSteps&&n0(ta[i])>0&&v!==0)vals.push(v)}
+  return w._v[ck]=vals.length?vals.reduce((x,y)=>x+y,0)/vals.length:null}
+function itemValue(w,item){if(!item)return null;if(item.type==='C'){const c=w.common[item.key];return c&&isNum(c.value)?c.value:null}return stepValue(w,item.key,item.kind||'Act')}
+function slurry(w,s0,s1){const ta=timeAct(w);const out={};let used=false;
+  for(const L in w.lines){const l=w.lines[L];let time=0,vol=0,on=false;
+    for(let i=s0-1;i<s1;i++){if(!isSupply((l.sel||[])[i]))continue;on=true;const tt=n0(ta[i]),f=n0(l.flow?.Act?.[i]);time+=tt;vol+=f*tt/60}
+    if(on)used=true;out[L]={time,vol,on}}
+  return{lines:out,used}}
+function pickAct(w,re){const o=findStep(w,re);if(o){const v=(o.Act||[]).find(x=>isNum(x)&&x!==0);if(v!=null)return v}
+  for(const k in w.common){const c=w.common[k];if(re.test(norm(c.cap))&&isNum(c.value))return c.value}return null}
+function padTemp(w){const o=findStep(w,RE.padT);return o?stepValue(w,o.sec+'|'+o.cap,'Act'):null}
+function padDiff(w){const h=pickAct(w,RE.padH),t=pickAct(w,RE.padThk);return h!=null&&t!=null?h-t:null}
+function dressStep(w){const o=findStep(w,RE.drLoad);const s=o?.Set||[];const i=s.findIndex(v=>isNum(v)&&v>0);return i>=0?i+1:null}
+function setAt(w,re,step){const o=findStep(w,re);if(!o||!step)return'';const v=(o.Set||[])[step-1];return v==null?'':v}
+function slurrySetAt(w,step){let best='';for(const L of Object.keys(w.lines).sort()){const l=w.lines[L];if(isSupply((l.sel||[])[step-1])){const v=l.flow?.Set?.[step-1];if(isNum(v)&&(best===''||v>best))best=v}}return best}
+// Sequence シートの列(正規化した見出し) → 値
+function seqFields(c,step){const w=c.w,ds=dressStep(w),S=re=>setAt(w,re,step),D=re=>setAt(w,re,ds);
+  const f={date:c.date,carrier:c.carrier,slot:c.slot,wfs:c.wfs,'d/m':c.dummy?'D':'',totalrecipe:c.recipe,route:c.route,remark:c.dummy?'Dummy':'',side:c.table,
+    'p/t':S(RE.time),ttrot:S(RE.tt),trrot:S(RE.tr),trosci:S(RE.trDist),'trosci#2':S(RE.trSpd),drscan:S(RE.drScan),drscancount:S(RE.drCount),drrot:S(RE.drRot),drload:S(RE.drLoad),drosci:S(RE.drOsc),
+    rrp:S(RE.rrp),slurry:slurrySetAt(w,step),
+    'ex:p/t':D(RE.time),'ex:drscan':D(RE.drScan),'ex:drscancount':D(RE.drCount),'ex:ttrot':D(RE.tt),'ex:drrot':D(RE.drRot),'ex:drload':D(RE.drLoad),'ex:drosci':D(RE.drOsc),'ex:droscipattern':D(RE.drOsc),'ex:dressingdiw':D(RE.drDiw)};
+  for(let n=1;n<=8;n++)f['a'+n+'p']=S(areaRe(n));
+  return f}
+const hn=s=>norm(s).replace(/\[.*?\]/g,'').replace(/[.\s]/g,'');
+// ===================== CORE-END =====================
+
+// ===================== STATE =====================
+const TABLES=['A','B','C','D'];const TV={A:'--tA',B:'--tB',C:'--tC',D:'--tD'};
+const COUNTERS=['Retainer Ring Processed Wafer','Retainer Ring Processed Time','Membrane Processed Wafer','Membrane Processed Time','Dresser Processed Time','Table (Polishing) Processed Wafer','Table (Polishing) Processed Time','Table (Dress) Processed Time','Retainer Ring Air Bag Processed Wafer','Retainer Ring Air Bag Processed Time'];
+let DB={wafers:[],jobs:[],summary:[],folders:{},errors:[],source:'sample'};
+let tablesOn=new Set(TABLES),chartOn=new Set(TABLES);
+const $=id=>document.getElementById(id);
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=(v,d=1)=>v==null||!isFinite(v)?'—':Number(v).toLocaleString('ja-JP',{maximumFractionDigits:d,minimumFractionDigits:d});
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,3200)}
+const XICON='<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="1.5" width="12" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5 5.5l2.6 3.5L5 12.5M10.6 5.5L8 9l2.6 3.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+$('expAll').innerHTML=XICON+'全テーブル Excel 出力';$('expCnt').innerHTML=XICON+'Excel';
+try{if(window.self!==window.top&&location.protocol!=='file:')$('sandboxNote').hidden=false}catch(e){$('sandboxNote').hidden=false}
+
+// ===================== SAMPLE DATA =====================
+function makeSample(){
+  let seed=7;const r=()=>(seed=(seed*16807)%2147483647)/2147483647;const g=()=>(r()+r()+r()-1.5)/1.5;
+  const N=null,E=Array(20).fill(N);
+  const P=a=>a.concat(Array(20-a.length).fill(0));
+  const TPL=[ // [caption, unit, Set(Step1..), ActProfile or null(=Set based)]
+    ['処理時間','s',P([1,2,3,4,33,15,0,2,999.9,12,13,14,15])],
+    ['T.T. 回転数','min-1',P([N,120,120,120,120,100,N,100,100,35,20,80,80])],
+    ['T.R. 回転数','min-1',P([N,127,127,127,127,107,N,107,107,0,0,0,0])],
+    ['T.R. 揺動距離','mm',P([N,0,0,0,0,0,N,0,0,0,0,0,0])],
+    ['D.R. ｽｷｬﾝ選択','',P([N,'無効','無効','無効','無効','無効',N,'無効','無効','有効','無効','無効','無効'])],
+    ['D.R. 揺動 優先回数','',P([N,N,N,N,N,N,N,N,N,2,N,N,N])],
+    ['D.R. 回転数','min-1',P([N,0,0,0,0,0,N,0,0,27,0,0,0])],
+    ['D.R. 押付荷重','N',P([N,0,0,0,0,0,N,0,0,50,0,0,0])],
+    ['D.R. 押付荷重(ロードセル)','N',P([N,0,0,0,0,0,N,0,0,50,0,0,0])],
+    ['D.R. 揺動選択','',P([N,N,N,N,N,N,N,N,N,'C<->E',N,N,N])],
+    ['D.R.純水流量','mL/min',P([500,500,500,500,500,500,N,500,500,500,500,500,500])],
+    ['ﾗｲﾝ A 選択','',P([N,'供給','供給','供給','供給','無効',N,'無効','無効','無効','無効','無効','供給'])],
+    ['ﾗｲﾝ D 選択','',P([N,'供給','供給','供給','供給','供給',N,'供給','供給','無効','無効','無効','供給'])],
+    ['ﾗｲﾝA 供給流量','mL/min',P([N,190,190,190,190,N,N,N,N,N,N,N,190])],
+    ['ﾗｲﾝD 供給流量','mL/min',P([N,2,2,2,2,24,N,24,24,N,N,N,2])],
+    ['ｴﾘｱ1ｴｱﾊﾞｯｸﾞ圧力','hPa',P([N,50,100,100,280,100,N,0,0,0,0,0,0])],
+    ['ｴﾘｱ2ｴｱﾊﾞｯｸﾞ圧力','hPa',P([N,0,100,100,270,100,N,0,0,0,0,0,0])],
+    ['ｴﾘｱ3ｴｱﾊﾞｯｸﾞ圧力','hPa',P([N,0,100,100,265,100,N,0,0,0,0,0,0])],
+    ['ｴﾘｱ4ｴｱﾊﾞｯｸﾞ圧力','hPa',P([N,0,100,100,275,100,N,0,0,0,0,0,0])],
+    ['ｴﾘｱ5ｴｱﾊﾞｯｸﾞ圧力','hPa',P([N,0,100,100,275,100,N,0,0,0,0,0,0])],
+    ['ｴﾘｱ6ｴｱﾊﾞｯｸﾞ圧力','hPa',P([N,0,100,100,275,100,N,0,0,0,0,0,0])],
+    ['ｴﾘｱ7ｴｱﾊﾞｯｸﾞ圧力','hPa',P([N,0,100,100,270,100,N,0,0,0,0,0,0])],
+    ['ｴﾘｱ8ｴｱﾊﾞｯｸﾞ圧力','hPa',P([N,0,100,100,350,100,N,0,0,0,0,0,0])],
+    ['ﾘﾃｰﾅﾘﾝｸﾞ面圧','hPa',P([N,450,450,450,450,200,N,175,175,175,175,175,175])],
+  ];
+  const NOSET=[['Pad温度','degC',[N,24.6,24.9,25,42.4,42.5,N,35.5,32.5,21.7,21,20.3,20.1]],['ｽﾗﾘ-ﾗｲﾝA 圧力','kPa',[N,150,151,150,150,N,N,N,N,N,N,N,150]]];
+  const bias={A:{},B:{'D.R. 押付荷重':1.12},C:{},D:{}};
+  const cnt={A:[412,96,1873,412,388,5230,1204,301,950,214],B:[455,104,1920,425,402,5390,1238,310,1010,226],C:[430,99,1150,251,395,5160,1190,305,970,219],D:[468,108,1950,431,410,5480,1260,318,1020,230]};
+  const wafers=[],jobs=[],summary=[];let wid=5000,sys=23824000;
+  for(let day=7;day<=22;day++){const date=`2026-10-${String(day).padStart(2,'0')}`;
+    for(const T of TABLES){let left=Math.round(4+r()*12);let hh=8;
+      while(left>0){const nw=Math.min(left,1+Math.floor(r()*6));left-=nw;const dummy=r()<0.12;sys++;
+        const lot=`PL${T}_${dummy?'DMY6':'SOPM_Slurry_'+date.slice(5).replace('-','')}`;const carrier=`ABC-${12000+Math.floor(r()*900)}`;
+        const job={sysLot:String(sys),carrier,lotId:lot,cj:lot,recipe:`TTL\\ABCD_Process\\${lot.slice(0,3)}${dummy?'_Dummy':'_SOPM_70-77'}`,list:[],wafers:nw,state:'Complete',start:'',folder:'Start Log/'+date.slice(5).replace('-','')};
+        for(let k=0;k<nw;k++){wid++;hh+=0.2;const start=`${date} ${String(Math.floor(hh)).padStart(2,'0')}:${String(Math.floor((hh%1)*60)).padStart(2,'0')}`;
+          const w={file:`ProcessLog_${carrier}.${String(k+1).padStart(2,'0')}_C1W${String(k+1).padStart(2,'0')}_${wid}.csv`,info:{},steps:{},common:{},polisher:T,id:String(wid),carrier,slot:String(k+1).padStart(2,'0'),
+            pos:`C1W${String(k+1).padStart(2,'0')}`,cj:lot,pj:lot,lot,recipe:job.recipe,route:`1 Table ${T}`,croute:'3 Clean Fix',status:'Complete',start,end:start,date,table:T,folder:job.folder};
+          const sec='Polisher_G3_Step';const ta=[];
+          for(const[cap,unit,set]of TPL){let S=set.slice();
+            if(dummy&&/選択$/.test(cap)&&/ﾗｲﾝ/.test(cap))S=S.map(v=>v==null?v:'無効');
+            const o={sec,cap,unit,Set:S};
+            if(typeof S.find(v=>v!=null)!=='string'){const b=bias[T][cap]||1;
+              o.Act=S.map((v,i)=>v==null?null:(cap==='処理時間'?(i===0?null:(i===8?+(2.5+r()).toFixed(1):v)):(v===0?0:+(v*b*(1+g()*0.012)).toFixed(1))));
+              o.Max=o.Act.map(v=>v==null?null:+(v*1.01).toFixed(1));o.Min=o.Act.map(v=>v==null?null:+(v*0.99).toFixed(1))}
+            if(dummy&&/供給流量/.test(cap))o.Act=o.Act.map(v=>v==null?null:0);
+            w.steps[sec+'|'+cap]=o}
+          const wear=(day-7)*0.012+(T==='C'?(day-7)*0.01:0);
+          for(const[cap,unit,prof]of NOSET){const o={sec,cap,unit,Act:P(prof.map(v=>v==null?null:+(v+(cap==='Pad温度'&&T==='C'&&day>15?(day-15)*1.1:0)+g()*0.6).toFixed(1)))};
+            if(cap==='ｽﾗﾘ-ﾗｲﾝA 圧力'&&dummy)o.Act=o.Act.map(()=>null);w.steps[sec+'|'+cap]=o}
+          const thk=+(4.70-wear+g()*0.01).toFixed(3);
+          w.steps[sec+'|Pad厚みセンサー']={sec,cap:'Pad厚みセンサー',unit:'mm',Act:P([N,0,0,0,0,0,N,0,0,thk,0,0,0])};
+          w.steps[sec+'|ﾊﾟｯﾄﾞｻｰﾁ時ﾊﾟｯﾄﾞ.高さ']={sec,cap:'ﾊﾟｯﾄﾞｻｰﾁ時ﾊﾟｯﾄﾞ.高さ',unit:'mm',Act:P([N,4.85,N,N,N,N,N,N,N,N,N,N,N])};
+          COUNTERS.forEach((c,i)=>{const isT=/Time/.test(c);cnt[T][i]+=isT?0.0137:1;w.common['Polisher_G3_Common|'+c]={sec:'Polisher_G3_Common',cap:c,unit:isT?'h':'枚',cat:'Act',value:+cnt[T][i].toFixed(isT?2:0)}});
+          finalizeWafer(w);wafers.push(w);job.list.push(w.id);w.job=job;
+          summary.push({wid:w.id,sysLot:job.sysLot,pos:w.pos,route:w.route,folder:job.folder})}
+        jobs.push(job)}}}
+  const folders={};for(const w of wafers){const f=folders[w.folder]||(folders[w.folder]={jobs:0,jobWafers:0,summary:0,details:0,linked:0});f.details++;f.linked++}
+  for(const j of jobs){folders[j.folder].jobs++;folders[j.folder].jobWafers+=j.wafers}for(const s of summary)folders[s.folder].summary++;
+  return{wafers,jobs,summary,folders,errors:[],source:'sample'};
+}
+
+// ===================== DERIVED =====================
+let KEYS=[];// {id,type,key,cap,sec,unit,kinds}
+function buildKeys(){const m=new Map();
+  for(const w of DB.wafers){for(const k in w.steps){const o=w.steps[k];let e=m.get('S|'+k);
+      for(const kind of['Act','Set','Max','Min']){const a=o[kind];if(a&&a.some(v=>isNum(v)&&v!==0)){if(!e){e={id:'S|'+k,type:'S',key:k,cap:o.cap,sec:o.sec,unit:o.unit,kinds:new Set()};m.set(e.id,e)}e.kinds.add(kind)}}}
+    for(const k in w.common){const c=w.common[k];if(isNum(c.value)&&!m.has('C|'+k))m.set('C|'+k,{id:'C|'+k,type:'C',key:k,cap:c.cap,sec:c.sec,unit:c.unit,kinds:new Set(['値'])})}}
+  KEYS=[...m.values()];}
+const keyById=id=>KEYS.find(k=>k.id===id);
+const secLabel=s=>s.replace(/_Step$|_Common$/,'').replace('Polisher_G3','Polisher')+(/_Common$/.test(s)?' 共通':'');
+const keyLabel=k=>`${k.cap}  [${secLabel(k.sec)}]`;
+function dates(){return[...new Set(DB.wafers.map(w=>w.date).filter(Boolean))].sort()}
+function inRange(){const d0=$('d0').value,d1=$('d1').value,dm=$('dmy').value==='1';
+  return DB.wafers.filter(w=>w.date>=d0&&w.date<=d1&&tablesOn.has(w.table)&&(dm||!w.dummy))}
+function itemOf(id,kind){const k=keyById(id);return k?{type:k.type,key:k.key,kind:k.type==='C'?null:(kind||'Act')}:null}
+
+// ===================== FILTER BAR =====================
+function initFilters(){
+  const ds=dates();$('d0').value=ds[0]||'';$('d1').value=ds[ds.length-1]||'';
+  const n=Math.max(1,...DB.wafers.map(w=>w.nSteps||0));const half=Math.ceil(n/2);
+  $('s0').innerHTML=Array.from({length:half},(_,i)=>`<option value="${i+1}">Step${i+1}</option>`).join('');
+  $('s0').value=1;fillS1(5);
+  $('seqStep').innerHTML=Array.from({length:n},(_,i)=>`<option value="${i+1}">Step${i+1}</option>`).join('');$('seqStep').value=Math.min(5,n);
+  const dopts=ds.slice().reverse().map(d=>`<option value="${d}">${d.slice(5).replace('-','/')}</option>`).join('');
+  $('c0').innerHTML=dopts;$('c1').innerHTML=dopts;$('c0').value=$('c1').value=ds[ds.length-1]||'';
+  const tg=$('tags');tg.innerHTML='';
+  for(const t of TABLES){const b=document.createElement('button');b.className='tag';b.style.setProperty('--c',`var(${TV[t]})`);b.textContent='Table '+t;b.setAttribute('aria-pressed',tablesOn.has(t));
+    b.onclick=()=>{tablesOn.has(t)?tablesOn.delete(t):tablesOn.add(t);b.setAttribute('aria-pressed',tablesOn.has(t));renderDash()};tg.append(b)}
+  // 項目セレクト
+  const stepActs=KEYS.filter(k=>k.type==='C'||k.kinds.has('Act'));
+  const opt=(k,sel)=>`<option value="${esc(k.id)}"${sel?' selected':''}>${esc(keyLabel(k))}</option>`;
+  const drs=KEYS.filter(k=>k.type==='S'&&/^d\.r\./.test(norm(k.cap))&&k.kinds.has('Act'));
+  $('drKey').innerHTML=drs.map(k=>opt(k,RE.drLoad.test(norm(k.cap)))).join('')||'<option value="">(なし)</option>';
+  const def=[/^スラリ-ラインa圧力$/,/^t\.t\.回転数$/,null];
+  ['ex1','ex2','ex3'].forEach((id,i)=>{$(id).innerHTML='<option value="">(なし)</option>'+stepActs.map(k=>opt(k,def[i]&&k.type==='S'&&k.sec.startsWith('Polisher_')&&def[i].test(norm(k.cap)))).join('')});
+  $('devCap').innerHTML='<option value="">すべて</option>'+KEYS.filter(k=>k.type==='S'&&k.kinds.has('Set')&&k.kinds.has('Act')).map(k=>opt(k)).join('');
+  fillCapSelect();
+  const last=DB.wafers.reduce((a,w)=>w.start>a?w.start:a,'');
+  $('lastInfo').textContent=`最新データ ${last||'—'} ・ ウェーハ ${DB.wafers.length.toLocaleString()} 枚`;
+  const b=$('srcBadge');b.textContent=DB.source==='sample'?'サンプルデータ表示中':`PC 取込データ ・ ${DB.wafers.length} 枚`;b.classList.toggle('real',DB.source!=='sample');
+}
+function fillS1(def){const n=Math.max(1,...DB.wafers.map(w=>w.nSteps||0)),half=Math.ceil(n/2),s0=+$('s0').value||1,cur=def||+$('s1').value||5;
+  const o=(i)=>`<option value="${i}">Step${i}</option>`;let h='',a='',b='';
+  for(let i=s0;i<=n;i++){if(i<half)a+=o(i);else b+=o(i)}
+  h=(a?`<optgroup label="前半 (Step1〜${half-1})">${a}</optgroup>`:'')+`<optgroup label="後半 (Step${half}〜${n})">${b}</optgroup>`;
+  $('s1').innerHTML=h;$('s1').value=Math.max(s0,Math.min(cur,n))}
+
+// ===================== CARDS =====================
+function tableMetrics(W){const s0=+$('s0').value,s1=+$('s1').value;
+  const ex=['ex1','ex2','ex3'].map(id=>$(id).value).filter(Boolean).map(id=>({id,item:itemOf(id,'Act'),k:keyById(id)}));
+  const dr=$('drKey').value?{item:itemOf($('drKey').value,'Act'),k:keyById($('drKey').value)}:null;
+  const letters=new Set();const M={};
+  for(const t of TABLES){if(!tablesOn.has(t))continue;const ws=W.filter(w=>w.table===t);
+    const sl=ws.map(w=>slurry(w,s0,s1));const lines={};
+    sl.forEach(s=>{for(const L in s.lines){if(!s.lines[L].on&&!(L in lines))continue;letters.add(L);const o=lines[L]||(lines[L]={time:0,vol:0});o.time+=s.lines[L].time;o.vol+=s.lines[L].vol}});
+    const sorted=ws.slice().sort((a,b)=>a.start<b.start?-1:1);const lastPd=[...sorted].reverse().map(padDiff).find(v=>v!=null);
+    const jobs=new Set(ws.map(w=>w.job).filter(Boolean));const expect=[...jobs].reduce((a,j)=>a+j.wafers,0);
+    const all=DB.wafers.filter(w=>w.table===t&&w.date>=$('d0').value&&w.date<=$('d1').value);
+    M[t]={ws,count:ws.length,slurryCount:sl.filter(s=>s.used).length,lines,padT:mean(ws.map(padTemp).filter(isNum)),padDiff:lastPd??null,padDiffAvg:mean(ws.map(padDiff).filter(isNum)),
+      dr:dr?mean(ws.map(w=>itemValue(w,dr.item)).filter(isNum)):null,ex:ex.map(e=>mean(ws.map(w=>itemValue(w,e.item)).filter(isNum))),
+      jobCheck:{expect:[...new Set(all.map(w=>w.job).filter(Boolean))].reduce((a,j)=>a+j.wafers,0),actual:all.length,hasJob:all.some(w=>w.job)}}}
+  return{M,letters:[...letters].sort(),ex,dr,s0,s1}}
+function devFlags(vals){const v=vals.filter(isNum);const m=mean(v);return vals.map(x=>isNum(x)&&m&&Math.abs(x-m)/Math.abs(m)>=0.1?(x-m)/Math.abs(m):null)}
+let lastMetrics=null;
+function renderCards(){const W=inRange();const R=tableMetrics(W);lastMetrics=R;const ts=Object.keys(R.M);
+  const rows=[ // [label, getter, unit, digits]
+    ['スラリ使用枚数',m=>m.slurryCount,'枚',0],
+    ...R.letters.map(L=>[`スラリ総流量(${L})`,m=>m.lines[L]?m.lines[L].vol/1000:0,'L',2,m=>m.lines[L]?`供給時間 ${fmt(m.lines[L].time/60,1)} 分`:'']),
+    ['Pad温度 Act(全枚数 AVE)',m=>m.padT,'degC',1],
+    ['Pad初期－現在Pad厚み差分',m=>m.padDiff,'mm',3,m=>m.padDiffAvg!=null?`期間 AVE ${fmt(m.padDiffAvg,3)}`:''],
+    [R.dr?.k?`${R.dr.k.cap} Act`:'ドレッサー',m=>m.dr,R.dr?.k?.unit||'',1],
+    ...R.ex.map((e,i)=>[`${e.k.cap} Act`,m=>m.ex[i],e.k.unit||'',1,null,true])];
+  const cntFlags=devFlags(ts.map(t=>R.M[t].count));
+  const flags=rows.map(r=>devFlags(ts.map(t=>r[1](R.M[t]))));
+  $('cards').innerHTML=ts.map((t,ti)=>{const m=R.M[t];const jc=m.jobCheck;
+    const chk=!jc.actual?'<span style="color:var(--mute)">期間内のデータなし</span>':jc.hasJob?(jc.expect===jc.actual?`<span class="ok">Job.csv 照合 ✓ ${jc.actual}/${jc.expect}</span>`:`<span class="ng">Job.csv 照合 ⚠ 詳細 ${jc.actual} / Job ${jc.expect}</span>`):'<span class="ng">Job.csv なし(詳細 CSV のみで集計)</span>';
+    const pct=f=>f==null?'':` title="テーブル平均比 ${f>0?'+':''}${(f*100).toFixed(1)}%"`;
+    return `<div class="card" style="--c:var(${TV[t]})"><h3>Table ${t}<button class="xbtn" data-exp="${t}" title="Table ${t} の集計を Excel で出力">${XICON}Excel</button></h3>
+    <div class="big${cntFlags[ti]!=null?' hl':''}"${pct(cntFlags[ti])}>${m.count.toLocaleString()}<small>枚処理${$('dmy').value==='1'?'(DMY 含む)':''}</small></div>
+    ${rows.map((r,ri)=>{const v=r[1](m),f=flags[ri][ti],sub=r[4]?r[4](m):'';
+      return `<div class="kv${f!=null?' hl':''}${r[5]?' ex':''}"${pct(f)}><span>${esc(r[0])}</span><b>${fmt(v,r[3])}<i>${esc(r[2])}</i></b></div>${sub?`<div class="kv sub"><span></span><b>${esc(sub)}</b></div>`:''}`}).join('')}
+    <div class="chk-line">${chk}</div></div>`}).join('')||'<p class="note">テーブルが選択されていません。</p>';
+  $('cards').querySelectorAll('[data-exp]').forEach(b=>b.onclick=()=>exportTables([b.dataset.exp]));
+}
+
+// ===================== CHART =====================
+function fillCapSelect(){const W=DB.wafers;const cur=$('cap').value;
+  // テーブル差が大きい項目を上に
+  const score=[];for(const k of KEYS){const kind=k.type==='C'?null:(k.kinds.has('Act')?'Act':[...k.kinds][0]);const it={type:k.type,key:k.key,kind};
+    const tm=TABLES.map(t=>mean(W.filter(w=>w.table===t).slice(-200).map(w=>itemValue(w,it)).filter(isNum))).filter(isNum);
+    if(tm.length>=2){const m=mean(tm);if(m)score.push([k,(Math.max(...tm)-Math.min(...tm))/Math.abs(m)])}}
+  score.sort((a,b)=>b[1]-a[1]);const top=score.filter(s=>s[1]>=0.03).slice(0,12);
+  const groups={};for(const k of KEYS)(groups[secLabel(k.sec)]??=[]).push(k);
+  const o=k=>`<option value="${esc(k.id)}">${esc(keyLabel(k))}</option>`;
+  $('cap').innerHTML=(top.length?`<optgroup label="テーブル差が大きい項目">${top.map(([k,s])=>`<option value="${esc(k.id)}">${esc(k.cap)}  (差 ${(s*100).toFixed(0)}%)</option>`).join('')}</optgroup>`:'')+
+    Object.entries(groups).map(([g,ks])=>`<optgroup label="${esc(g)}">${ks.map(o).join('')}</optgroup>`).join('');
+  const padK=KEYS.find(k=>RE.padT.test(norm(k.cap)));
+  $('cap').value=cur&&keyById(cur)?cur:(padK?padK.id:(KEYS[0]?.id||''));fillKind()}
+function fillKind(){const k=keyById($('cap').value);const cur=$('kind').value;
+  $('kind').innerHTML=k?[...k.kinds].map(x=>`<option>${x}</option>`).join(''):'';if(k&&k.kinds.has(cur))$('kind').value=cur}
+let chartData=null;
+function renderChart(){const k=keyById($('cap').value);const svg=$('chart');if(!k){svg.innerHTML='';return}
+  const item={type:k.type,key:k.key,kind:k.type==='C'?null:$('kind').value};const W=inRange();const agg=$('agg').value;
+  const days=[];for(let d=new Date($('d0').value+'T00:00:00Z');d<=new Date($('d1').value+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+1))days.push(d.toISOString().slice(0,10));
+  const ser={};for(const t of TABLES){if(!tablesOn.has(t))continue;ser[t]=days.map(day=>{const v=W.filter(w=>w.table===t&&w.date===day).map(w=>itemValue(w,item)).filter(isNum);if(!v.length)return null;
+    return agg==='sum'?v.reduce((a,b)=>a+b,0):agg==='max'?Math.max(...v):agg==='min'?Math.min(...v):mean(v)})}
+  const vis=Object.keys(ser).filter(t=>chartOn.has(t));
+  const flags={};const flagT=new Set();
+  days.forEach((_,i)=>{const vs=vis.map(t=>ser[t][i]);const f=devFlags(vs);vis.forEach((t,j)=>{if(f[j]!=null){(flags[t]??={})[i]=f[j];flagT.add(t)}})});
+  const H=+$('yh').value,Wd=820,L=56,R=16,T=14,B=30;svg.setAttribute('viewBox',`0 0 ${Wd} ${H}`);svg.style.minWidth='600px';
+  const all=vis.flatMap(t=>ser[t]).filter(isNum);let lo=Math.min(...all),hi=Math.max(...all);const mode=$('ymode').value;
+  if(!all.length){lo=0;hi=1}
+  if(mode==='zero'){lo=Math.min(0,lo);hi=hi>0?hi*1.08:1}
+  else if(mode==='man'){const a=parseFloat($('ymin').value),b=parseFloat($('ymax').value);if(isFinite(a))lo=a;if(isFinite(b))hi=b}
+  else{const p=(hi-lo)*0.12||Math.abs(hi)*0.05||1;lo-=p;hi+=p}
+  if(hi<=lo)hi=lo+1;
+  if(mode!=='man'){$('ymin').value=+lo.toPrecision(4);$('ymax').value=+hi.toPrecision(4)}
+  const x=i=>L+(Wd-L-R)*(days.length>1?i/(days.length-1):0.5),y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  let s='';const tick=niceTicks(lo,hi,Math.max(3,Math.round(H/60)));
+  for(const v of tick){if(v<lo||v>hi)continue;s+=`<line x1="${L}" x2="${Wd-R}" y1="${y(v)}" y2="${y(v)}" stroke="${css('--line')}"/><text x="${L-6}" y="${y(v)+3}" text-anchor="end">${+v.toPrecision(6)}</text>`}
+  const step=Math.ceil(days.length/12);days.forEach((d,i)=>{if(i%step===0)s+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle">${d.slice(5).replace('-','/')}</text>`});
+  s+=`<text x="6" y="11">${esc(k.unit||'')}</text>`;
+  for(const t of vis){const c=css(TV[t]);let seg=[],paths='';const flush=()=>{if(seg.length>1)paths+=`<polyline fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" points="${seg.join(' ')}"/>`;seg=[]};
+    ser[t].forEach((v,i)=>{if(v==null){flush();return}seg.push(x(i).toFixed(1)+','+y(v).toFixed(1))});flush();s+=paths;
+    ser[t].forEach((v,i)=>{if(v==null)return;const f=flags[t]?.[i];s+=`<circle cx="${x(i)}" cy="${y(v)}" r="${f!=null?3.5:2.5}" fill="${c}"/>`;
+      if(f!=null)s+=`<circle cx="${x(i)}" cy="${y(v)}" r="7.5" fill="none" stroke="${css('--crit')}" stroke-width="1.8"/>`})}
+  s+=`<line id="cursor" x1="0" x2="0" y1="${T}" y2="${H-B}" stroke="${css('--mute')}" stroke-dasharray="3 3" visibility="hidden"/><rect id="hit" x="${L}" y="${T}" width="${Wd-L-R}" height="${H-T-B}" fill="transparent"/>`;
+  svg.innerHTML=s;chartData={days,ser,vis,flags,x,L,R,Wd,k,item};
+  $('legend').innerHTML=TABLES.filter(t=>ser[t]).map(t=>`<button class="lg${flagT.has(t)?' flag':''}" style="--c:var(${TV[t]})" data-t="${t}" aria-pressed="${chartOn.has(t)}">Table ${t}${flagT.has(t)?' ⚠':''}</button>`).join('');
+  $('legend').querySelectorAll('.lg').forEach(b=>b.onclick=()=>{const t=b.dataset.t;chartOn.has(t)?chartOn.delete(t):chartOn.add(t);renderChart()});
+  const hit=$('hit'),tip=$('tip');
+  hit.onmousemove=e=>{const r=svg.getBoundingClientRect();const sx=(e.clientX-r.left)*(Wd/r.width);const n=days.length;
+    const i=Math.max(0,Math.min(n-1,Math.round((sx-L)/((Wd-L-R)/Math.max(1,n-1)))));const cur=$('cursor');cur.setAttribute('x1',x(i));cur.setAttribute('x2',x(i));cur.setAttribute('visibility','visible');
+    tip.innerHTML=`<div style="font-weight:700;margin-bottom:3px">${days[i]}</div>`+vis.map(t=>{const v=ser[t][i],f=flags[t]?.[i];return `<div style="display:flex;justify-content:space-between;gap:10px;color:var(${TV[t]})"><span>Table ${t}</span><b>${v==null?'—':fmt(v,2)}${f!=null?` <span class="pill crit">${f>0?'+':''}${(f*100).toFixed(1)}%</span>`:''}</b></div>`}).join('')+`<div style="color:var(--mute);font-size:11px;margin-top:3px">${esc(k.cap)} ${esc(item.kind||'')} ・ ${$('agg').selectedOptions[0].text}</div>`;
+    tip.hidden=false;const wr=$('chartWrap').getBoundingClientRect();let lx=e.clientX-wr.left+14+$('chartWrap').scrollLeft;if(lx+190>wr.width+$('chartWrap').scrollLeft)lx-=210;tip.style.left=lx+'px';tip.style.top=(e.clientY-wr.top+10)+'px'};
+  hit.onmouseleave=()=>{tip.hidden=true;$('cursor').setAttribute('visibility','hidden')};
+}
+function niceTicks(lo,hi,n){const span=hi-lo,raw=span/n,mag=Math.pow(10,Math.floor(Math.log10(raw))),st=[1,2,2.5,5,10].map(m=>m*mag).find(v=>v>=raw)||raw;const out=[];for(let v=Math.ceil(lo/st)*st;v<=hi+1e-9;v+=st)out.push(+v.toFixed(10));return out}
+
+// ===================== DEVIATION =====================
+function renderDev(){const W=inRange();const only=$('devCap').value,ep=$('devEp').checked;const out=[];let total=0;
+  for(const w of W){for(const k in w.steps){if(only&&only!=='S|'+k)continue;const o=w.steps[k];if(!o.Set||!o.Act)continue;
+    for(let i=0;i<Math.max(w.nSteps,0);i++){const s=o.Set[i],a=o.Act[i];if(!isNum(s)||s===0||!isNum(a))continue;if(ep&&s>=999)continue;total++;const d=(a-s)/Math.abs(s);if(Math.abs(d)>=0.1)out.push({w,o,i,s,a,d})}}}
+  out.sort((p,q)=>p.w.start<q.w.start?1:p.w.start>q.w.start?-1:Math.abs(q.d)-Math.abs(p.d));
+  $('devCount').textContent=`±10% 以上 ${out.length.toLocaleString()} 件 / 比較 ${total.toLocaleString()} 件${out.length>300?'(新しい順に 300 件表示)':''}`;
+  $('dev').innerHTML=out.slice(0,300).map(r=>`<tr class="dev"><td class="l">${r.w.date.slice(5).replace('-','/')}</td><td class="l">Table ${r.w.table}</td><td class="l">${esc(r.o.cap)}</td><td>Step${r.i+1}</td><td>${r.s}</td><td>${r.a}</td><td><span class="pill crit">${r.d>0?'+':''}${(r.d*100).toFixed(1)}%</span></td><td class="l">${esc(r.w.cj)} / ${esc(r.w.id)}</td></tr>`).join('')||'<tr><td class="l" colspan="8">±10% 以上の乖離はありません。</td></tr>'}
+
+// ===================== COUNTERS =====================
+function counterMatrix(){let c0=$('c0').value,c1=$('c1').value;if(c0>c1)[c0,c1]=[c1,c0];
+  const items=COUNTERS.map(name=>{const nn=norm(name);return{name,keys:new Set(KEYS.filter(k=>k.type==='C'&&norm(k.cap)===nn).map(k=>k.key))}});
+  const out=items.map(it=>{const row={name:it.name,unit:'',v:{},d:{}};
+    for(const t of TABLES){const ws=DB.wafers.filter(w=>w.polisher===t).sort((a,b)=>a.start<b.start?-1:1);let before=null,first=null,last=null;
+      for(const w of ws){let c=null;for(const k of it.keys)if(w.common[k]){c=w.common[k];break}if(!c||!isNum(c.value))continue;row.unit=row.unit||c.unit;
+        if(w.date<c0)before=c.value;else if(w.date<=c1){if(first==null)first=c.value;last=c.value}}
+      row.v[t]=last;row.d[t]=last==null?null:last-(before??first)}
+    return row});
+  return{rows:out,c0,c1}}
+function renderCounters(){const{rows,c0,c1}=counterMatrix();const same=c0===c1;
+  $('cntHead').innerHTML=`<tr><th class="l">項目</th>${TABLES.map(t=>`<th class="tcol" style="--c:var(${TV[t]})">Polisher${t}</th>`).join('')}</tr>`;
+  $('cnts').innerHTML=rows.map(r=>{const f=devFlags(TABLES.map(t=>r.v[t]));return `<tr><td class="l">${esc(r.name)}${r.unit?` <span style="color:var(--mute)">[${esc(r.unit)}]</span>`:''}</td>${TABLES.map((t,i)=>{const v=r.v[t],d=r.d[t];const dg=/time/i.test(r.name)?1:0;
+    return `<td class="${f[i]!=null?'hl':''}"${f[i]!=null?` title="テーブル平均比 ${f[i]>0?'+':''}${(f[i]*100).toFixed(1)}%"`:''}>${v==null?'—':fmt(v,dg)}${f[i]!=null?' ▲':''}<small>${d==null?'':`${same?'当日':'期間'} +${fmt(d,dg)}`}</small></td>`}).join('')}</tr>`}).join('');
+  const any=rows.some(r=>TABLES.some(t=>r.v[t]!=null));
+  $('cntNote').textContent=(any?'':'取り込んだデータに消耗品カウンタの値がありません(PolisherX_G3_Common の Caption を確認してください)。 ')+`${same?c1+' 時点':c0+'〜'+c1+''} の値。大きい数字は期間終了時点の累計、小さい数字は期間中の増分です。▲ はテーブル平均から ±10% 以上の差。`;
+  if(!$('barItem').options.length)$('barItem').innerHTML=COUNTERS.map((c,i)=>`<option value="${i}">${c}</option>`).join('');
+  renderBars(rows)}
+function renderBars(rows){rows=rows||counterMatrix().rows;const r=rows[+$('barItem').value||0];const mode=$('barMode').value;const vals=TABLES.map(t=>mode==='v'?r.v[t]:r.d[t]);
+  const W=430,H=210,L=50,B=26,T=16;const mx=Math.max(1,...vals.filter(isNum))*1.15;const bw=(W-L-10)/4;const f=devFlags(vals);let s='';
+  for(const v of niceTicks(0,mx,4)){const yy=T+(H-T-B)*(1-v/mx);s+=`<line x1="${L}" x2="${W-6}" y1="${yy}" y2="${yy}" stroke="${css('--line')}"/><text x="${L-6}" y="${yy+3}" text-anchor="end" style="font:10px var(--mono);fill:${css('--mute')}">${v.toLocaleString()}</text>`}
+  TABLES.forEach((t,i)=>{const v=vals[i];const x0=L+i*bw+bw*0.2,w=bw*0.6;const c=css(TV[t]);
+    if(isNum(v)){const hh=(H-T-B)*(v/mx);s+=`<rect x="${x0}" y="${H-B-hh}" width="${w}" height="${hh}" rx="2" fill="${c}"/><text x="${x0+w/2}" y="${H-B-hh-4}" text-anchor="middle" style="font:11px var(--mono);fill:${f[i]!=null?css('--crit'):css('--ink')}">${fmt(v,/time/i.test(r.name)?1:0)}${f[i]!=null?' ▲':''}</text>`}
+    s+=`<text x="${x0+w/2}" y="${H-8}" text-anchor="middle" style="font:11px var(--sans);fill:${c};font-weight:700">Polisher${t}</text>`});
+  $('bars').innerHTML=s}
+
+// ===================== EXPORT =====================
+function stamp(){const d=new Date(),p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`}
+async function saveWb(wb,name){const buf=await wb.xlsx.writeBuffer();saveBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name);return buf.byteLength}
+function saveBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast(`保存しました: ${name}`)}
+function styleHeader(ws){const r=ws.getRow(1);r.font={bold:true,color:{argb:'FFFFFFFF'}};r.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0B6E8A'}};ws.views=[{state:'frozen',ySplit:1}];
+  ws.columns.forEach(c=>{let m=8;c.eachCell({includeEmpty:false},cell=>{m=Math.max(m,String(cell.value??'').length+2)});c.width=Math.min(m,40)})}
+async function exportTables(ts){if(!window.ExcelJS)return toast('Excel ライブラリを読み込めませんでした');const R=lastMetrics;const wb=new ExcelJS.Workbook();
+  const sum=wb.addWorksheet('テーブル別集計');const hdr=['項目',...ts.map(t=>'Table '+t)];sum.addRow(hdr);
+  const add=(lab,f)=>sum.addRow([lab,...ts.map(t=>{const v=f(R.M[t]);return isNum(v)?+v.toFixed(4):v??''})]);
+  add('期間',()=>`${$('d0').value}〜${$('d1').value}`);add('集計 Step',()=>`Step${R.s0}〜Step${R.s1}`);add('処理枚数',m=>m.count);add('スラリ使用枚数',m=>m.slurryCount);
+  for(const L of R.letters){add(`スラリ総流量(${L}) [L]`,m=>m.lines[L]?m.lines[L].vol/1000:0);add(`スラリ供給時間(${L}) [min]`,m=>m.lines[L]?m.lines[L].time/60:0)}
+  add('Pad温度 Act AVE [degC]',m=>m.padT);add('Pad初期－現在Pad厚み差分 [mm](最新)',m=>m.padDiff);add('Pad初期－現在Pad厚み差分 [mm](AVE)',m=>m.padDiffAvg);
+  if(R.dr?.k)add(`${R.dr.k.cap} Act AVE`,m=>m.dr);R.ex.forEach((e,i)=>add(`${e.k.cap} Act AVE`,m=>m.ex[i]));styleHeader(sum);
+  for(const t of ts){const ws=wb.addWorksheet('Table '+t);const head=['日付','開始時刻','CJ','ロットID','ウェーハID','スロット','レシピ','DMY','スラリ使用',...R.letters.flatMap(L=>[`スラリ供給時間(${L}) [s]`,`スラリ総流量(${L}) [mL]`]),'Pad温度 Act AVE','Pad初期－現在Pad厚み差分',...(R.dr?.k?[R.dr.k.cap+' Act']:[]),...R.ex.map(e=>e.k.cap+' Act'),'ファイル'];ws.addRow(head);
+    for(const w of R.M[t].ws){const sl=slurry(w,R.s0,R.s1);const r4=v=>isNum(v)?+v.toFixed(4):'';
+      ws.addRow([w.date,w.start,w.cj,w.lot,w.id,w.slot,w.recipe,w.dummy?'DMY':'',sl.used?'○':'',...R.letters.flatMap(L=>[r4(sl.lines[L]?.time??0),r4(sl.lines[L]?.vol??0)]),r4(padTemp(w)),r4(padDiff(w)),...(R.dr?.k?[r4(itemValue(w,R.dr.item))]:[]),...R.ex.map(e=>r4(itemValue(w,e.item))),w.file])}
+    styleHeader(ws)}
+  await saveWb(wb,`CMP_テーブル集計_${ts.length===1?'Table'+ts[0]+'_':''}${stamp()}.xlsx`)}
+async function exportCounters(){if(!window.ExcelJS)return;const{rows,c0,c1}=counterMatrix();const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet('消耗品カウンタ');
+  ws.addRow(['項目','単位',...TABLES.flatMap(t=>[`Polisher${t} 現在値`,`Polisher${t} 増分`])]);rows.forEach(r=>ws.addRow([r.name,r.unit,...TABLES.flatMap(t=>[r.v[t]??'',r.d[t]??''])]));ws.addRow([]);ws.addRow(['対象期間',`${c0}〜${c1}`]);styleHeader(ws);
+  await saveWb(wb,`CMP_消耗品カウンタ_${c1}_${stamp()}.xlsx`)}
+// Process_Total:Wafers + Raw。10MB を超えたら分割して _1, _2 …
+const LIMIT=10*1024*1024;
+async function buildTotal(ws){const wb=new ExcelJS.Workbook();const a=wb.addWorksheet('Wafers');
+  const cols=['key','date','start','end','table','polisher','id','carrier','slot','pos','cj','pj','lot','recipe','route','croute','status','dummy','folder','file','jobSysLot','jobWafers'];a.addRow(cols);
+  const raw=wb.addWorksheet('Raw');raw.addRow(['key','section','caption','unit','cat','step','value']);
+  for(const w of ws){a.addRow(cols.map(c=>c==='jobSysLot'?w.job?.sysLot??'':c==='jobWafers'?w.job?.wafers??'':c==='dummy'?(w.dummy?1:0):w[c]??''));
+    for(const k in w.steps){const o=w.steps[k];for(const cat of['Set','Act','Max','Min']){const arr=o[cat];if(!arr)continue;arr.forEach((v,i)=>{if(v!=null&&v!=='')raw.addRow([w.key,o.sec,o.cap,o.unit,cat,i+1,v])})}}
+    for(const k in w.common){const c=w.common[k];if(c.value!=null&&c.value!=='')raw.addRow([w.key,c.sec,c.cap,c.unit,c.cat,'',c.value])}}
+  return wb.xlsx.writeBuffer()}
+async function saveTotal(){if(!window.ExcelJS)return;const ws=DB.wafers.slice().sort((a,b)=>a.start<b.start?-1:1);if(!ws.length)return toast('保存するデータがありません');
+  $('prog').textContent='Process_Total を作成中…';const parts=[];
+  const go=async arr=>{const buf=await buildTotal(arr);if(buf.byteLength>LIMIT&&arr.length>1){const h=Math.ceil(arr.length/2);await go(arr.slice(0,h));await go(arr.slice(h))}else parts.push(buf)};
+  await go(ws);const base=`Process_Total_${ws[0].date.replace(/-/g,'')}-${ws[ws.length-1].date.replace(/-/g,'')}`;
+  parts.forEach((b,i)=>saveBlob(new Blob([b]),parts.length>1?`${base}_${i+1}.xlsx`:`${base}.xlsx`));
+  $('prog').textContent=`Process_Total を ${parts.length} ファイルで保存(${(parts.reduce((a,b)=>a+b.byteLength,0)/1048576).toFixed(1)} MB)`}
+async function loadTotal(buf,name){const wb=new ExcelJS.Workbook();await wb.xlsx.load(buf);const a=wb.getWorksheet('Wafers'),raw=wb.getWorksheet('Raw');if(!a||!raw)return 0;
+  const cols=a.getRow(1).values.slice(1);const map={};const jobs={};
+  a.eachRow((r,i)=>{if(i===1)return;const v=r.values.slice(1);const w={info:{},steps:{},common:{}};cols.forEach((c,j)=>w[c]=v[j]==null?'':String(v[j]));w.dummy=w.dummy==='1';
+    if(w.jobSysLot){const j=jobs[w.jobSysLot]||(jobs[w.jobSysLot]={sysLot:w.jobSysLot,wafers:+w.jobWafers||0,list:[],folder:w.folder,lotId:w.lot,cj:w.cj,recipe:w.recipe});j.list.push(w.id);w.job=j}map[w.key]=w});
+  raw.eachRow((r,i)=>{if(i===1)return;const[key,sec,cap,unit,cat,step,value]=r.values.slice(1);const w=map[key];if(!w)return;const k=sec+'|'+cap;
+    if(step===''||step==null)w.common[k]={sec,cap,unit:unit||'',cat,value:num(value)};else{const o=w.steps[k]||(w.steps[k]={sec,cap,unit:unit||''});(o[cat]||(o[cat]=[]))[+step-1]=num(value)}});
+  const ws=Object.values(map).map(w=>{const j=w.job,d=w.dummy;finalizeWafer(w);w.dummy=d;w.job=j;return w});mergeWafers(ws,name);
+  for(const j of Object.values(jobs))DB.jobs.push(j);return ws.length}
+
+// ===================== IMPORT =====================
+function mergeWafers(ws,folderLabel){if(DB.source==='sample')DB={wafers:[],jobs:[],summary:[],folders:{},errors:[],source:'local'};
+  const idx=new Map(DB.wafers.map((w,i)=>[w.key,i]));for(const w of ws){if(idx.has(w.key))DB.wafers[idx.get(w.key)]=w;else{idx.set(w.key,DB.wafers.length);DB.wafers.push(w)}}}
+async function walkEntries(items){const out=[];const walk=async(e,path)=>{if(e.isFile){const f=await new Promise((res,rej)=>e.file(res,rej));out.push({file:f,path:path+f.name})}
+  else if(e.isDirectory){const rd=e.createReader();let batch;do{batch=await new Promise((res,rej)=>rd.readEntries(res,rej));for(const c of batch)await walk(c,path+e.name+'/')}while(batch.length)}};
+  const ents=[...items].map(it=>it.webkitGetAsEntry&&it.webkitGetAsEntry()).filter(Boolean);for(const e of ents)await walk(e,'');return out}
+async function importList(list){if(!list.length)return;const dir=p=>p.includes('/')?p.slice(0,p.lastIndexOf('/')):'(直接選択)';
+  const kind=n=>/ProcessLog_Job\.(csv|cvs)$/i.test(n)?'job':/ProcessLog_Summary\.(csv|cvs)$/i.test(n)?'sum':/^ProcessLog_.+\.(csv|cvs)$/i.test(n)?'det':/^Process_Total.*\.xlsx$/i.test(n)?'total':null;
+  const items=list.map(x=>({...x,kind:kind(x.file.name)})).filter(x=>x.kind);const skipped=list.length-items.length;
+  const errors=[];const jobsBy={},sumBy={};const newW=[];let done=0;const tot=items.length;
+  for(const it of items.filter(x=>x.kind==='total')){try{const n=await loadTotal(await it.file.arrayBuffer(),it.file.name);toast(`${it.file.name} から ${n} 枚を復元`)}catch(e){errors.push([it.path,'Process_Total を読めません: '+e.message])}done++}
+  for(const it of items.filter(x=>x.kind==='job'||x.kind==='sum')){try{const t=decodeBuf(await it.file.arrayBuffer());const d=dir(it.path);
+      if(it.kind==='job')(jobsBy[d]=jobsBy[d]||[]).push(...parseJob(t,d));else(sumBy[d]=sumBy[d]||[]).push(...parseSummary(t,d))}catch(e){errors.push([it.path,e.message])}done++}
+  const jdirs=Object.keys({...jobsBy,...sumBy}).sort((a,b)=>b.length-a.length);
+  for(const it of items.filter(x=>x.kind==='det')){if(done%20===0){$('prog').textContent=`読込中 ${done}/${tot}`;await new Promise(r=>setTimeout(r))}
+    try{const t=decodeBuf(await it.file.arrayBuffer());const w=parseDetail(t,it.path);const d=dir(it.path);w.folder=jdirs.find(j=>d===j||d.startsWith(j+'/'))||d;
+      if(!Object.keys(w.steps).length)errors.push([it.path,'Step データが見つかりません(形式を確認)']);
+      else{if(!w.date)errors.push([it.path,'開始時刻が読めません']);newW.push(w)}}catch(e){errors.push([it.path,e.message])}done++}
+  // Job / Summary と紐付け
+  const allJobs=Object.values(jobsBy).flat();
+  for(const w of newW){const js=jobsBy[w.folder]||allJobs;w.job=js.find(j=>j.list.includes(w.id))||null;
+    if(!w.job){const s=(sumBy[w.folder]||[]).find(s=>s.wid===w.id);if(s)w.job=js.find(j=>j.sysLot===s.sysLot)||null}}
+  if(newW.length||allJobs.length)mergeWafers(newW);DB.jobs.push(...allJobs);DB.summary.push(...Object.values(sumBy).flat());
+  const folders=new Set([...Object.keys(jobsBy),...Object.keys(sumBy),...newW.map(w=>w.folder)]);
+  for(const f of folders){const js=jobsBy[f]||[],ss=sumBy[f]||[],ws=newW.filter(w=>w.folder===f);DB.folders[f]={jobs:js.length,jobWafers:js.reduce((a,j)=>a+j.wafers,0),summary:ss.length,details:ws.length,linked:ws.filter(w=>w.job).length}}
+  DB.errors.push(...errors);$('prog').textContent=`取込完了:詳細 CSV ${newW.length} 件${skipped?`(対象外 ${skipped} 件を除外)`:''}${errors.length?` ・ エラー ${errors.length} 件`:''}`;
+  refreshAll();}
+function renderLog(){const fs=Object.entries(DB.folders).sort();
+  $('logTbl').innerHTML=fs.map(([f,v])=>{const ok=v.jobWafers===v.details&&v.summary===v.details;const st=ok?'<span class="pill ok">✓ 一致</span>':`<span class="pill warn">⚠ 要確認</span> ${v.jobWafers!==v.details?`Job ${v.jobWafers} ≠ 詳細 ${v.details}`:''} ${v.summary!==v.details?`Summary ${v.summary} ≠ 詳細 ${v.details}`:''}`;
+    return `<tr><td class="l">${esc(f)}</td><td>${v.jobs}</td><td>${v.jobWafers}</td><td>${v.summary}</td><td>${v.details}</td><td>${v.linked}</td><td class="l">${st}</td></tr>`}).join('')||'<tr><td class="l" colspan="7">まだ取り込んでいません。</td></tr>';
+  $('logSum').textContent=`${DB.source==='sample'?'サンプル':'PC 取込'} ・ フォルダ ${fs.length} ・ ウェーハ ${DB.wafers.length}`;
+  $('errBox').innerHTML=DB.errors.length?`<h2 style="margin-top:14px;font-size:13px;color:var(--crit)">エラー ${DB.errors.length} 件</h2><div class="tw"><table><tbody>${DB.errors.slice(-200).map(([p,m])=>`<tr><td class="l">${esc(p)}</td><td class="l">${esc(m)}</td></tr>`).join('')}</tbody></table></div>`:''}
+
+// ===================== SEQUENCE =====================
+let SEQ={wb:null,name:'',ws:null,hdrRow:0,colKey:{},sel:null,ins:new Set(),undo:[],used:new Set()};
+function seqHeaderMap(ws){let hr=0;for(let r=1;r<=Math.min(20,ws.rowCount);r++){const vals=[];ws.getRow(r).eachCell({includeEmpty:false},c=>vals.push(hn(c.text)));if(vals.includes('date')&&vals.includes('carrier')){hr=r;break}}
+  const colKey={};if(!hr)return{hr,colKey};const seen={};
+  for(let c=1;c<=ws.columnCount;c++){let name=hn(ws.getRow(hr).getCell(c).text);if(!name)continue;let grp='';for(let r=hr-1;r>=Math.max(1,hr-2)&&!grp;r--)grp=norm(ws.getRow(r).getCell(c).text);
+    let key=(/ex-?situ/.test(grp)?'ex:':'')+name;seen[key]=(seen[key]||0)+1;if(seen[key]>1)key+='#'+seen[key];colKey[c]=key}
+  return{hr,colKey}}
+function cellText(c){const v=c.value;if(v instanceof Date)return v.toISOString().slice(0,10);if(v&&typeof v==='object'&&'result'in v)return String(v.result??'');return c.text??''}
+async function openSeq(buf,name){const wb=new ExcelJS.Workbook();await wb.xlsx.load(buf);SEQ.wb=wb;SEQ.name=name;
+  $('seqSheet').innerHTML=wb.worksheets.map(w=>`<option>${esc(w.name)}</option>`).join('');const def=wb.worksheets.find(w=>w.name==='シーケンス表')||wb.worksheets[0];$('seqSheet').value=def.name;
+  $('seqName').textContent=name;selectSheet()}
+function selectSheet(){SEQ.ws=SEQ.wb.getWorksheet($('seqSheet').value);const m=seqHeaderMap(SEQ.ws);SEQ.hdrRow=m.hr;SEQ.colKey=m.colKey;SEQ.sel=null;SEQ.ins=new Set();SEQ.undo=[];renderSeq();renderCand()}
+function renderSeq(){const ws=SEQ.ws;if(!ws){$('seqTbl').innerHTML='';return}const nc=Math.min(ws.columnCount,90),hr=SEQ.hdrRow||1;let h='<thead>';
+  for(let r=1;r<=hr;r++){h+=`<tr class="${r===hr?'h2':'h1'}"><th class="rn">${r}</th>`;for(let c=1;c<=nc;c++){const cell=ws.getRow(r).getCell(c);const t=cellText(cell);
+    if(r<hr&&cell.isMerged&&cell.master!==cell&&cell.master.row===r)continue;let span=1;if(r<hr&&cell.isMerged&&cell.master===cell){let c2=c+1;while(c2<=nc&&ws.getRow(r).getCell(c2).isMerged&&ws.getRow(r).getCell(c2).master===cell){span++;c2++}}
+    h+=`<th${span>1?` colspan="${span}"`:''}>${esc(t)}</th>`}h+='</tr>'}
+  h+='</thead><tbody>';for(let r=hr+1;r<=ws.rowCount;r++){const row=ws.getRow(r);h+=`<tr data-r="${r}" class="${SEQ.ins.has(r)?'ins':''}${SEQ.sel===r?' selrow':''}"><td class="rn">${r}</td>`;for(let c=1;c<=nc;c++)h+=`<td class="${c<=11?'l':''}">${esc(cellText(row.getCell(c)))}</td>`;h+='</tr>'}
+  if(ws.rowCount<=hr)h+=`<tr data-r="${hr}"><td class="rn"></td><td class="l" colspan="${nc}" style="color:var(--mute)">(データ行なし:ここにドロップすると見出しの下に挿入)</td></tr>`;
+  $('seqTbl').innerHTML=h+'</tbody>';const h1=$('seqTbl').querySelector('tr.h1');if(h1)$('seqTbl').style.setProperty('--h1h',h1.getBoundingClientRect().height+'px');updSeqBtns()}
+function candidates(){const W=inRange();const g=new Map();
+  for(const w of W.slice().sort((a,b)=>a.start<b.start?-1:1)){const id=w.job?'J'+w.job.sysLot:'C'+w.date+'|'+w.cj+'|'+w.recipe;let c=g.get(id);
+    if(!c){c={id,date:w.date,carrier:w.carrier,slots:[],wafers:[],recipe:w.recipe,route:[w.route,w.croute].filter(Boolean).join('-').replace(/\s+/g,''),table:w.table,dummy:w.dummy,job:w.job,w};g.set(id,c)}
+    c.slots.push(w.slot);c.wafers.push(w);if(!w.dummy&&c.w.dummy)c.w=w}
+  return[...g.values()].map(c=>{c.slot=c.slots.join(',');c.wfs=c.job?c.job.wafers:c.wafers.length;c.check=c.job?c.job.wafers===c.wafers.length:null;c.dummy=c.wafers.every(w=>w.dummy);return c})}
+let CANDS=[];
+const DEFCOLS=['date','carrier','slot','wfs','d/m','totalrecipe','route','side','p/t','ttrot','trrot','drrot','drload','a1p','a2p','a3p','a4p','slurry','ex:p/t','ex:ttrot','ex:drrot','ex:drload','ex:dressingdiw'];
+const COLLAB={'d/m':'D/M','p/t':'P/T','ex:p/t':'Ex P/T','ex:ttrot':'Ex TT','ex:drrot':'Ex DR Rot','ex:drload':'Ex DR Load','ex:dressingdiw':'Ex DIW','ex:drscancount':'Ex Scan','ex:droscipattern':'Ex Osci'};
+function candCols(){const keys=SEQ.ws?Object.values(SEQ.colKey):DEFCOLS;return keys.filter(k=>k in seqFields({w:CANDS[0]?.w||DB.wafers[0]||{steps:{},common:{},lines:{},_f:{},_v:{}}},1))}
+function renderCand(){CANDS=candidates();const step=+$('seqStep').value||5;const cols=candCols();const prev=new Set([...$('candTbl').querySelectorAll('input[data-c]:checked')].map(i=>i.dataset.c));
+  $('candInfo').textContent=`${$('d0').value}〜${$('d1').value} ・ ${CANDS.length} Job`;
+  const ds=CANDS[0]?dressStep(CANDS[0].w):null;$('dressStep').textContent=ds?`Step${ds}(D.R. 押付荷重 Set > 0 から自動)`:'検出なし';
+  $('candTbl').innerHTML=`<thead><tr><th></th><th class="l">照合</th>${cols.map(k=>`<th>${esc(COLLAB[k]||k.toUpperCase())}</th>`).join('')}</tr></thead><tbody>`+
+    CANDS.map(c=>{const f=seqFields(c,step);return `<tr draggable="true" data-c="${esc(c.id)}" class="${SEQ.used.has(c.id)?'used':''}"><td><input type="checkbox" data-c="${esc(c.id)}" ${prev.has(c.id)?'checked':''} aria-label="選択"></td><td class="l">${c.check==null?'<span class="pill warn">Job なし</span>':c.check?'<span class="pill ok">✓</span>':`<span class="pill crit">${c.wafers.length}/${c.wfs}</span>`}</td>${cols.map(k=>`<td class="${['date','carrier','totalrecipe','route'].includes(k)?'l':''}${f[k]!==''&&f[k]!=null?' k':''}">${esc(f[k])}</td>`).join('')}</tr>`}).join('')+'</tbody>';
+  $('mapTbl').innerHTML='<thead><tr><th class="l">列</th><th class="l">取得元</th></tr></thead><tbody>'+MAPDOC.map(([a,b])=>`<tr><td class="l">${a}</td><td class="l">${b}</td></tr>`).join('')+'</tbody>';
+  $('candTbl').querySelectorAll('tr[draggable]').forEach(tr=>tr.addEventListener('dragstart',e=>{const id=tr.dataset.c;const checked=[...$('candTbl').querySelectorAll('input[data-c]:checked')].map(i=>i.dataset.c);
+    const ids=checked.includes(id)?checked:[id];e.dataTransfer.setData('text/x-cmp',JSON.stringify(ids));e.dataTransfer.effectAllowed='copy'}));
+  $('candTbl').querySelectorAll('input[data-c]').forEach(i=>i.onchange=updSeqBtns);updSeqBtns()}
+const MAPDOC=[['Date / Carrier / Slot','WaferInfo の 開始時刻・キャリアID、ファイル名のスロット'],['Wfs.','ProcessLog_Job.csv の Wafers(詳細 CSV の数と照合)'],['D/M・Remark','ﾗｲﾝ A/D 選択 がすべて 無効、または DMY を含むロット → D / Dummy'],['TotalRecipe / Route','全体レシピID / プロセスルート-クリーナルート'],['Side','Table 記号'],['P/T','処理時間 Set(基準 Step)'],['TT / TR / DR Rot.','T.T. / T.R. / D.R. 回転数 Set(基準 Step)'],['TR Osci.','T.R. 揺動距離 / 揺動速度 Set'],['DR Load','D.R. 押付荷重 Set'],['A1P〜A8P','ｴﾘｱ1〜8ｴｱﾊﾞｯｸﾞ圧力 Set(基準 Step)'],['RRP','ﾘﾃｰﾅﾘﾝｸﾞ面圧 Set(基準 Step)'],['Slurry','供給中ラインの ﾗｲﾝ○ 供給流量 Set(最大値)'],['Ex-situ Dress 各列','D.R. 押付荷重 Set > 0 の Step の 処理時間・T.T. 回転数・D.R. 回転数/荷重・揺動 優先回数・揺動選択・純水流量']];
+function updSeqBtns(){const n=$('candTbl').querySelectorAll('input[data-c]:checked').length;$('insUp').disabled=$('insDn').disabled=!(SEQ.ws&&SEQ.sel&&n);$('undo').disabled=!SEQ.undo.length;
+  $('insUp').textContent=`▲ 選択行の上に挿入${n?`(${n})`:''}`;$('insDn').textContent=`▼ 選択行の下に挿入${n?`(${n})`:''}`;$('candAll').checked=n&&n===CANDS.length}
+function insertAt(pos,ids){const ws=SEQ.ws;if(!ws)return;const step=+$('seqStep').value||5;const nc=ws.columnCount;const list=ids.map(id=>CANDS.find(c=>c.id===id)).filter(Boolean);if(!list.length)return;
+  list.forEach((c,i)=>{const f=seqFields(c,step);const arr=new Array(nc).fill(null);
+    for(const col in SEQ.colKey){const k=SEQ.colKey[col];if(!(k in f)||f[k]==='')continue;let v=f[k];if(k==='date'&&/^\d{4}-\d\d-\d\d$/.test(v)){const[y,m,d]=v.split('-').map(Number);v=new Date(Date.UTC(y,m-1,d))}arr[col-1]=v}
+    ws.insertRow(pos+i,arr,pos+i>SEQ.hdrRow+1?'i':'o');SEQ.used.add(c.id)});
+  const n=list.length;SEQ.ins=new Set([...SEQ.ins].map(r=>r>=pos?r+n:r));for(let i=0;i<n;i++)SEQ.ins.add(pos+i);if(SEQ.sel&&SEQ.sel>=pos)SEQ.sel+=n;
+  SEQ.undo.push({pos,n,ids:list.map(c=>c.id)});renderSeq();renderCand();toast(`${n} 行を ${pos} 行目に挿入しました`)}
+function undoSeq(){const u=SEQ.undo.pop();if(!u)return;SEQ.ws.spliceRows(u.pos,u.n);SEQ.ins=new Set([...SEQ.ins].filter(r=>r<u.pos||r>=u.pos+u.n).map(r=>r>=u.pos+u.n?r-u.n:r));
+  if(SEQ.sel&&SEQ.sel>=u.pos+u.n)SEQ.sel-=u.n;u.ids.forEach(id=>{if(!SEQ.undo.some(x=>x.ids.includes(id)))SEQ.used.delete(id)});renderSeq();renderCand();toast('元に戻しました')}
+function sampleSeqWb(){const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet('シーケンス表');
+  const H=['Date','Event','Carrier','Slot','Film','Wfs.','D/M','TotalRecipe','Route','ME Recipe','Remark','Side','P/T\n[sec]','TT Rot.\n[min-1]','TR Rot.\n[min-1]','TR Osci.\n[mm]','TR Osci.\n[mm/s]','DR Scan','DR Rot.\n[min-1]','DR Load\n[N]','A1P\n[hPa]','A2P\n[hPa]','A3P\n[hPa]','A4P\n[hPa]','A5P\n[hPa]','A6P\n[hPa]','A7P\n[hPa]','A8P\n[hPa]','RRP\n[hPa]','Slurry\n[ml/min]','P/T\n[sec]','DR Scan Count','TT Rot.\n[min-1]','DR Rot.\n[min-1]','DR Load\n[N]','DR Osci. Pattern','Dressing DIW\n[ml/min]'];
+  ws.addRow(Array(12).fill('').concat(['Main Polish',...Array(17).fill('')],['Ex-situ Dress',...Array(6).fill('')]));ws.mergeCells(1,13,1,30);ws.mergeCells(1,31,1,37);ws.addRow(H);
+  [['2026-10-21','✓','12345','01','TEOS',1,'D','TTL\\ABCD\\ABCD_1234','1TableD-3CleanFix','-','Dummy','D',33,120,127,0,'',' 無効',0,0,280,270,265,275,275,275,270,280,350,190,12,2,35,27,50,'C<->E',500],
+   ['2026-10-21','','54321','02','TEOS',3,'','TTL\\ABCD\\PLA_1','1TableA-3CleanFix','-','','A',33,120,127,0,'','無効',0,0,280,270,265,275,275,275,270,280,350,190,12,2,35,27,50,'C<->E',500],
+   ['2026-10-22','','','','','','','','','','(ここから手入力待ち)','','','','','','','','','','','','','','','','','','','','','','','','','','']].forEach(r=>{const[y,m,d]=r[0].split('-').map(Number);r[0]=new Date(Date.UTC(y,m-1,d));ws.addRow(r)});
+  [1,2].forEach(i=>{const r=ws.getRow(i);r.font={bold:true,color:{argb:'FFFFFFFF'}};r.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1F3D8C'}};r.alignment={wrapText:true,horizontal:'center'}});
+  ws.getColumn(1).numFmt='yyyy-mm-dd';return wb}
+
+// ===================== RENDER ALL =====================
+function renderDash(){renderCards();renderChart();renderDev();renderCounters()}
+function refreshAll(){buildKeys();initFilters();renderDash();renderLog();if(SEQ.ws)renderCand()}
+
+// ===================== EVENTS =====================
+['d0','d1','dmy'].forEach(i=>$(i).addEventListener('change',()=>{renderDash();if(SEQ.ws)renderCand()}));
+$('s0').onchange=()=>{fillS1();renderCards()};$('s1').onchange=renderCards;
+['drKey','ex1','ex2','ex3'].forEach(i=>$(i).onchange=renderCards);
+$('cap').onchange=()=>{fillKind();$('ymode').value==='man'&&($('ymode').value='auto');$('ymanBox').hidden=true;renderChart()};
+['kind','agg','yh'].forEach(i=>$(i).addEventListener('input',renderChart));
+$('ymode').onchange=()=>{$('ymanBox').hidden=$('ymode').value!=='man';renderChart()};['ymin','ymax'].forEach(i=>$(i).addEventListener('change',()=>{$('ymode').value='man';$('ymanBox').hidden=false;renderChart()}));
+$('devCap').onchange=renderDev;$('devEp').onchange=renderDev;['c0','c1'].forEach(i=>$(i).onchange=renderCounters);['barItem','barMode'].forEach(i=>$(i).onchange=()=>renderBars());
+$('expAll').onclick=()=>exportTables(TABLES.filter(t=>tablesOn.has(t)));$('expCnt').onclick=exportCounters;
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  for(const v of['dash','seq','log'])$('v-'+v).hidden=b.dataset.v!==v;if(b.dataset.v==='seq'){renderSeq();renderCand()}if(b.dataset.v==='dash')renderChart()});
+// ログ取込
+$('pickDir').onclick=()=>$('dirIn').click();$('pickFiles').onclick=()=>$('filesIn').click();
+$('dirIn').onchange=e=>importList([...e.target.files].map(f=>({file:f,path:f.webkitRelativePath||f.name})));
+$('filesIn').onchange=e=>importList([...e.target.files].map(f=>({file:f,path:f.name})));
+function dropZone(el,onDrop){el.addEventListener('dragover',e=>{if([...e.dataTransfer.types].includes('Files')){e.preventDefault();el.classList.add('over')}});el.addEventListener('dragleave',e=>{if(!el.contains(e.relatedTarget))el.classList.remove('over')});
+  el.addEventListener('drop',e=>{if(![...e.dataTransfer.types].includes('Files'))return;e.preventDefault();el.classList.remove('over');onDrop(e)})}
+dropZone($('logDrop'),async e=>{$('prog').textContent='フォルダを読み込み中…';const list=await walkEntries(e.dataTransfer.items);importList(list.length?list:[...e.dataTransfer.files].map(f=>({file:f,path:f.name})))});
+$('saveTotal').onclick=saveTotal;$('loadSample').onclick=()=>{DB=makeSample();tablesOn=new Set(TABLES);chartOn=new Set(TABLES);refreshAll();toast('サンプルデータに戻しました')};
+// Sequence
+$('seqOpenBtn').onclick=()=>$('seqFile').click();
+$('seqFile').onchange=async e=>{const f=e.target.files[0];if(f)await openSeq(await f.arrayBuffer(),f.name)};
+dropZone($('seqDrop'),async e=>{const f=[...e.dataTransfer.files].find(f=>/\.xlsx|\.xlsm$/i.test(f.name));if(f)await openSeq(await f.arrayBuffer(),f.name);else toast('.xlsx ファイルをドロップしてください')});
+$('seqSheet').onchange=selectSheet;$('seqStep').onchange=renderCand;
+$('candAll').onchange=e=>{$('candTbl').querySelectorAll('input[data-c]').forEach(i=>i.checked=e.target.checked);updSeqBtns()};
+const checkedIds=()=>[...$('candTbl').querySelectorAll('input[data-c]:checked')].map(i=>i.dataset.c);
+$('insUp').onclick=()=>insertAt(SEQ.sel,checkedIds());$('insDn').onclick=()=>insertAt(SEQ.sel+1,checkedIds());$('undo').onclick=undoSeq;
+$('seqTbl').addEventListener('click',e=>{const tr=e.target.closest('tr[data-r]');if(!tr)return;SEQ.sel=+tr.dataset.r;$('seqTbl').querySelectorAll('tr.selrow').forEach(x=>x.classList.remove('selrow'));tr.classList.add('selrow');updSeqBtns()});
+$('seqTbl').addEventListener('dragover',e=>{if(![...e.dataTransfer.types].includes('text/x-cmp'))return;const tr=e.target.closest('tr[data-r]');if(!tr)return;e.preventDefault();
+  $('seqTbl').querySelectorAll('.da,.db').forEach(x=>x.classList.remove('da','db'));const r=tr.getBoundingClientRect();tr.classList.add(e.clientY<r.top+r.height/2&&+tr.dataset.r>SEQ.hdrRow?'da':'db')});
+$('seqTbl').addEventListener('dragleave',e=>{if(!$('seqTbl').contains(e.relatedTarget))$('seqTbl').querySelectorAll('.da,.db').forEach(x=>x.classList.remove('da','db'))});
+$('seqTbl').addEventListener('drop',e=>{const d=e.dataTransfer.getData('text/x-cmp');if(!d)return;e.preventDefault();e.stopPropagation();const tr=e.target.closest('tr[data-r]');if(!tr)return;
+  const above=tr.classList.contains('da');$('seqTbl').querySelectorAll('.da,.db').forEach(x=>x.classList.remove('da','db'));const r=+tr.dataset.r;insertAt(above?r:r+1,JSON.parse(d))});
+$('seqSave').onclick=async()=>{if(!SEQ.wb)return;const base=SEQ.name.replace(/\.(xlsx|xlsm)$/i,'');await saveWb(SEQ.wb,`${base}_挿入済_${stamp()}.xlsx`)};
+matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{renderChart();renderBars()});
+
+// ===================== BOOT =====================
+DB=makeSample();refreshAll();
+if(window.ExcelJS){SEQ.wb=sampleSeqWb();SEQ.name='Sequence_サンプル.xlsx';$('seqSheet').innerHTML='<option>シーケンス表</option>';$('seqName').textContent=SEQ.name+'(サンプル)';selectSheet()}
+</script>

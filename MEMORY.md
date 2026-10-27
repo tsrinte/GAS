@@ -31,6 +31,18 @@ BOX에 매일 올라오는 CMP 장치 Job 로그(CSV)를 GAS로 자동 취합하
 - **소모품 카운터**(PolisherD_G3_Common의 Caption/E 단위/F 값)를 날짜별 적산, 화면 오른쪽에 실시간 표시: Retainer Ring / Membrane / Dresser / Table(Polishing) / Table(Dress) / Retainer Ring Air Bag 각 Processed Wafer·Time (10개).
 - 코딩 시작 조건: 사용자와 화면 시안·의도 합의 후. 화면 시안은 Artifact로 공유 (샘플 값).
 
+## 추가 결정 (2026-10-27, 4차 피드백 → 웹앱 2차)
+- **아키텍처**: 화면은 단일 HTML(`webapp/CMP_LogAnalyzer.html`)로 만들고 브라우저 안에서 CSV·xlsx를 처리한다. `python3 webapp/build.py` → `webapp/dist/CMP_LogAnalyzer_offline.html`(ExcelJS 내장, 인터넷 없이 PC에서 열어서 사용). BOX 자동 취합(GAS 트리거)은 같은 화면에 데이터 소스로 붙인다 (Step2).
+- 슬러리: 레시피 총 Step 자동 파악(処理時間 Set/Act > 0인 마지막 Step). ﾗｲﾝ○ 選択 = 供給인 Step만 Σ(流量 Act × 時間 Act / 60). 라인 기호는 Caption에서 추출(일본어 ﾗｲﾝ/ライン, 영어 Line). 카드 표기 `スラリ総流量(A)`, `(D)`. 사용 매수는 A·D 동시 공급도 1매.
+- Step 드롭다운: 기본 Step1~Step5, 왼쪽은 전반(1~총Step/2), 오른쪽은 왼쪽 값 이후 전부(전반/후반 그룹 표시). ※사용자 원안(오른쪽=후반만)은 기본값 Step5와 충돌 → 확인 요청함.
+- DMY 판정: ﾗｲﾝ 選択이 모두 無効, 또는 로트/레시피에 DMY 포함.
+- Pad初期－現在Pad厚み差分 = ﾊﾟｯﾄﾞｻｰﾁ時ﾊﾟｯﾄﾞ.高さ Act − Pad厚みセンサー Act (기간 내 최신 웨이퍼, AVE 병기).
+- 카드·소모품 카운터·그래프: 테이블 간 평균 대비 ±10% 이상이면 강조(▲, 빨간 원).
+- 소모품 카운터: PolisherA~D 열로 나란히, 対象日 2개(기본 = 최신 데이터 날짜), 현재값 + 기간 증분, 아래 막대 그래프.
+- Sequence 挿入: PC 파일 열기/드롭, 시트 `シーケンス表` 기본, 행 선택 후 위/아래 삽입, 체크한 행만, 드래그&드롭, 원본은 건드리지 않고 별명 저장. 기준 Step 기본 Step5 Set, Ex-situ Dress 열은 D.R. 押付荷重 Set>0 인 Step.
+- 저장: Process_Total(Wafers+Raw 시트), 10MB 초과 시 `_1`, `_2`… 분할. 다시 드롭하면 이어서 집계.
+- 乖離표: 処理時間 Set 999.9(EP 상한 시간)는 기본 제외(체크박스).
+
 ## BOX 폴더 구조
 Main/Project/Log(이름 가변)/Start Log/일별로그/날짜폴더(1010 등)/
 - `CJ_..._(링크번호)` 폴더 안에 웨이퍼별 상세 CSV `ProcessLog_<Carrier>.<Slot>_<C#W##>_<SystemWaferID>.csv`
@@ -50,4 +62,5 @@ Main/Project/Log(이름 가변)/Start Log/일별로그/날짜폴더(1010 등)/
 사람이 수동 입력하는 시트. 열: Date, Event, Carrier, Slot, Film, Wfs, D/M, TotalRecipe, Route, ME Recipe, Remark, Side, P/T, TT Rot, TR Rot, DR Rot/Load, A1P~A8P, RRP, Slurry, Ex-situ Dress 등. 파란 셀 부분을 로그에서 채워 행 사이사이에 insert하는 것이 목표.
 
 ## 단계(Step) 진행 상황
-- Step2 이후: BOX OAuth2 → 파서 → Process_Total 저장 → 대시보드 → Sequence 삽입 (순서 확정 전, 사용자와 협의 중)
+- ✓ 웹앱 2차 (2026-10-27): 파서·대시보드·카운터·Sequence 삽입·로컬 폴더 취합·Process_Total 저장. 시안 https://claude.ai/artifact/KatHni399EvYhgTgfas7Yr
+- 다음: 사용자 피드백 반영 → Step2 BOX OAuth2 연동(GAS) → 트리거 자동 취합
