@@ -24,6 +24,13 @@ BOX에 매일 올라오는 CMP 장치 Job 로그(CSV)를 GAS로 자동 취합하
 - BOX Client ID/Secret은 새로 발급 (기존 자동화와 분리). 시크릿은 스크립트 속성에만 저장, 대화·저장소에 넣지 않는다.
 - 규모: 하루 상세 CSV 약 30~400개 → 증분 처리 + 6분 실행 제한 대응(배치/이어서 실행) 필요.
 
+## 추가 결정 (2026-10-27, 3차 답변)
+- Act 값이 0이면 0 그대로, 비어 있으면 0으로 처리 (보정·대체 없음, 시트와의 정합성 우선).
+- **Set 대비 Act가 ±10% 이상 벗어나면 UI에서 눈에 띄게 강조** (전 레시피 대상).
+- 드레서는 토크 Caption이 없으므로 `D.R. 押付荷重` Act, `D.R. 押付荷重(ロードセル)` Act를 사용. Caption을 드롭다운으로 바꿔 볼 수 있게 한다. (단위는 E열)
+- **소모품 카운터**(PolisherD_G3_Common의 Caption/E 단위/F 값)를 날짜별 적산, 화면 오른쪽에 실시간 표시: Retainer Ring / Membrane / Dresser / Table(Polishing) / Table(Dress) / Retainer Ring Air Bag 각 Processed Wafer·Time (10개).
+- 코딩 시작 조건: 사용자와 화면 시안·의도 합의 후. 화면 시안은 Artifact로 공유 (샘플 값).
+
 ## BOX 폴더 구조
 Main/Project/Log(이름 가변)/Start Log/일별로그/날짜폴더(1010 등)/
 - `CJ_..._(링크번호)` 폴더 안에 웨이퍼별 상세 CSV `ProcessLog_<Carrier>.<Slot>_<C#W##>_<SystemWaferID>.csv`
