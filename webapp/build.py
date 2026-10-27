@@ -1,7 +1,7 @@
 """オフライン配布用の単一 HTML を作る。
 
 CMP_LogAnalyzer.html(CDN から ExcelJS を読む版)を元に、
-vendor/exceljs.min.js を埋め込み、HTML の骨組みを付けて dist/ に出力する。
+vendor/ のライブラリ(ExcelJS, html-to-image)を埋め込み、HTML の骨組みを付けて dist/ に出力する。
 インターネットがない PC でもブラウザで開くだけで動く。
 
 使い方: python3 build.py
@@ -10,15 +10,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 SRC = ROOT / "CMP_LogAnalyzer.html"
-LIB = ROOT / "vendor" / "exceljs.min.js"
+LIBS = {
+    '<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>': ROOT / "vendor" / "exceljs.min.js",
+    '<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>': ROOT / "vendor" / "html-to-image.min.js",
+}
 OUT = ROOT / "dist" / "CMP_LogAnalyzer_offline.html"
-CDN_TAG = '<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>'
-
-src = SRC.read_text(encoding="utf-8")
-if CDN_TAG not in src:
-    raise SystemExit("ExcelJS の script タグが見つかりません")
-lib = LIB.read_text(encoding="utf-8").replace("</script", "<\\/script")
-body = src.replace(CDN_TAG, "<script>" + lib + "</script>")
+body = SRC.read_text(encoding="utf-8")
+for tag, path in LIBS.items():
+    if tag not in body:
+        raise SystemExit(f"script タグが見つかりません: {tag}")
+    lib = path.read_text(encoding="utf-8").replace("</script", "<\\/script")
+    body = body.replace(tag, "<script>" + lib + "</script>")
 html = (
     "<!doctype html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"utf-8\">\n"
     "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">\n"

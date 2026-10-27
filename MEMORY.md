@@ -43,6 +43,16 @@ BOX에 매일 올라오는 CMP 장치 Job 로그(CSV)를 GAS로 자동 취합하
 - 저장: Process_Total(Wafers+Raw 시트), 10MB 초과 시 `_1`, `_2`… 분할. 다시 드롭하면 이어서 집계.
 - 乖離표: 処理時間 Set 999.9(EP 상한 시간)는 기본 제외(체크박스).
 
+## 추가 결정 (2026-10-27, 5차 피드백 → 웹앱 3차)
+- 방향 확정: BOX 자동 취합(GAS 트리거)이 기본, 인터넷이 없는 환경은 「ProcessLog取込」(PC 폴더)로 대응. 하나의 툴로 유지.
+- 탭 이름: Dashboard / Sequence 挿入 / ProcessLog取込. 헤더에 Light/Dark 전환(선택은 브라우저에 기억).
+- 集計 Step 範囲: 왼쪽·오른쪽 모두 Step1~20, 기본 Step1~Step5. 슬러리·추가 항목·日次推移에 적용. Pad温度 = 범위 끝 Step(기본 Step5)의 Act, 전 웨이퍼 평균.
+- 추가 항목 범위 밖(예: D.R. 은 Step10)은 「範囲外(Step10)」로 표시.
+- 테이블 카드: 개별 Excel 버튼 삭제, 카드 전체 스크린샷(PNG) 저장 버튼. 日次推移: 스크린샷 + Excel, 단위 표시, 높이 수동(px). テーブル別比較: 스크린샷.
+- 乖離: 처리시간 Set 999.9(EP 상한)은 항상 제외(체크박스 없음). 기준 0~20%(기본 10%). 발생 시각·슬롯(s01) 표시. 날짜×시간대 히트맵(테이블 선택, 클릭하면 표 필터).
+- Sequence 挿入: 원본 시트는 테마와 무관하게 흰 바탕+원본 셀 색. 서식만 있는 하단 빈 행은 표시하지 않고 가상 스크롤로 경량화. 후보는 별도 기간 지정, 슬롯은 01-04로 압축, 삽입 행은 노란색+NEW, 삽입 내역 목록. Ex-situ Dress Step 표시는 삭제(내부 자동 검출은 유지). .xlsm 은 저장 시 매크로가 빠짐(안내 표시).
+- ProcessLog取込: 큰 점선 드롭 영역+폴더 아이콘(클릭으로 폴더 선택), BOX 는 「※BOX接続検討中」.
+
 ## BOX 폴더 구조
 Main/Project/Log(이름 가변)/Start Log/일별로그/날짜폴더(1010 등)/
 - `CJ_..._(링크번호)` 폴더 안에 웨이퍼별 상세 CSV `ProcessLog_<Carrier>.<Slot>_<C#W##>_<SystemWaferID>.csv`
@@ -63,4 +73,5 @@ Main/Project/Log(이름 가변)/Start Log/일별로그/날짜폴더(1010 등)/
 
 ## 단계(Step) 진행 상황
 - ✓ 웹앱 2차 (2026-10-27): 파서·대시보드·카운터·Sequence 삽입·로컬 폴더 취합·Process_Total 저장. 시안 https://claude.ai/artifact/KatHni399EvYhgTgfas7Yr
-- 다음: 사용자 피드백 반영 → Step2 BOX OAuth2 연동(GAS) → 트리거 자동 취합
+- ✓ 웹앱 3차 (2026-10-27): 위 5차 피드백 반영
+- 다음: 사용자 피드백 → Step2 BOX OAuth2 연동(GAS) → 트리거 자동 취합
