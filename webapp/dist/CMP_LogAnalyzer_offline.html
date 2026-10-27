@@ -256,8 +256,9 @@ details summary{cursor:pointer;font-size:12px;color:var(--accent);font-weight:70
    </div>
    <div class="srcc">
      <h3>集計データ(Process_Total)</h3>
-     <p>取り込んだ全データを Excel に保存します。10MB を超える場合は _1, _2 … に分けて保存します。保存したファイルを左の枠にドロップすると、続きから集計できます。</p>
+     <p>ダッシュボードの期間内のデータを、日付ごとに Process_Total_日付.xlsx として保存します。1 ファイルが 10MB を超える場合は _1, _2 … に分けます。保存したファイルを左の枠にドロップすると、続きから集計できます。</p>
      <div class="row"><button class="btn" id="saveTotal">Process_Total を保存</button><button class="btn sec" id="loadSample">サンプルに戻す</button></div>
+     <div id="pending"></div>
    </div>
   </div>
  </section>
@@ -684,8 +685,12 @@ function renderBars(rows){rows=rows||counterMatrix().rows;const r=rows[+$('barIt
 
 // ===================== EXPORT =====================
 function stamp(){const d=new Date(),p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`}
-async function saveWb(wb,name){const buf=await wb.xlsx.writeBuffer();saveBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name);return buf.byteLength}
-function saveBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast(`保存しました: ${name}`)}
+async function saveWb(wb,name){const buf=await wb.xlsx.writeBuffer();await saveBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name);return buf.byteLength}
+let DL=null;if(window.claude&&window.claude.use)window.claude.use('downloads').then(d=>{DL=d;if(d)$('sandboxNote').hidden=true}).catch(()=>{});
+async function saveBlob(blob,name){if(DL){try{await DL.save({filename:name,data:blob});toast(`保存しました: ${name}`)}catch(e){toast(e&&e.code==='declined'?'保存をキャンセルしました':`保存できませんでした(${e&&e.code||'error'})`)}return}
+  if(window.showSaveFilePicker&&window.self===window.top){try{const h=await window.showSaveFilePicker({suggestedName:name,types:[{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]});
+    const wr=await h.createWritable();await wr.write(blob);await wr.close();toast(`保存しました: ${h.name}`);return}catch(e){if(e&&e.name==='AbortError'){toast('保存をキャンセルしました');return}}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast(`保存しました: ${name}`)}
 function styleHeader(ws){const r=ws.getRow(1);r.font={bold:true,color:{argb:'FFFFFFFF'}};r.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0B6E8A'}};ws.views=[{state:'frozen',ySplit:1}];
   ws.columns.forEach(c=>{let m=8;c.eachCell({includeEmpty:false},cell=>{m=Math.max(m,String(cell.value??'').length+2)});c.width=Math.min(m,40)})}
 async function exportTables(ts){if(!window.ExcelJS)return toast('Excel ライブラリを読み込めませんでした');const R=lastMetrics;const wb=new ExcelJS.Workbook();
@@ -707,23 +712,30 @@ async function exportCounters(){if(!window.ExcelJS)return;const{rows,c0,c1}=coun
 const LIMIT=10*1024*1024;
 async function buildTotal(ws){const wb=new ExcelJS.Workbook();const a=wb.addWorksheet('Wafers');
   const cols=['key','date','start','end','table','polisher','id','carrier','slot','pos','cj','pj','lot','recipe','route','croute','status','dummy','folder','file','jobSysLot','jobWafers'];a.addRow(cols);
-  const raw=wb.addWorksheet('Raw');raw.addRow(['key','section','caption','unit','cat','step','value']);
+  const NS=20;const raw=wb.addWorksheet('Raw');raw.addRow(['key','section','caption','unit','cat','value',...Array.from({length:NS},(_,i)=>'Step'+(i+1))]);
   for(const w of ws){a.addRow(cols.map(c=>c==='jobSysLot'?w.job?.sysLot??'':c==='jobWafers'?w.job?.wafers??'':c==='dummy'?(w.dummy?1:0):w[c]??''));
-    for(const k in w.steps){const o=w.steps[k];for(const cat of['Set','Act','Max','Min']){const arr=o[cat];if(!arr)continue;arr.forEach((v,i)=>{if(v!=null&&v!=='')raw.addRow([w.key,o.sec,o.cap,o.unit,cat,i+1,v])})}}
-    for(const k in w.common){const c=w.common[k];if(c.value!=null&&c.value!=='')raw.addRow([w.key,c.sec,c.cap,c.unit,c.cat,'',c.value])}}
+    for(const k in w.steps){const o=w.steps[k];for(const cat of['Set','Act','Max','Min']){const arr=o[cat];if(!arr||!arr.some(v=>v!=null&&v!==''))continue;raw.addRow([w.key,o.sec,o.cap,o.unit,cat,null,...Array.from({length:NS},(_,i)=>arr[i]??null)])}}
+    for(const k in w.common){const c=w.common[k];if(c.value!=null&&c.value!=='')raw.addRow([w.key,c.sec,c.cap,c.unit,c.cat,c.value])}}
   return wb.xlsx.writeBuffer()}
 async function saveTotal(){if(!window.ExcelJS)return;const ws=DB.wafers.slice().sort((a,b)=>a.start<b.start?-1:1);if(!ws.length)return toast('保存するデータがありません');
-  $('prog').textContent='Process_Total を作成中…';const parts=[];
-  const go=async arr=>{const buf=await buildTotal(arr);if(buf.byteLength>LIMIT&&arr.length>1){const h=Math.ceil(arr.length/2);await go(arr.slice(0,h));await go(arr.slice(h))}else parts.push(buf)};
-  await go(ws);const base=`Process_Total_${ws[0].date.replace(/-/g,'')}-${ws[ws.length-1].date.replace(/-/g,'')}`;
-  parts.forEach((b,i)=>saveBlob(new Blob([b]),parts.length>1?`${base}_${i+1}.xlsx`:`${base}.xlsx`));
-  $('prog').textContent=`Process_Total を ${parts.length} ファイルで保存(${(parts.reduce((a,b)=>a+b.byteLength,0)/1048576).toFixed(1)} MB)`}
+  const days=[...new Set(ws.map(w=>w.date))].sort();const d0=$('d0').value,d1=$('d1').value;const target=days.filter(d=>d>=d0&&d<=d1);
+  let files=0,bytes=0;const out=[];
+  for(const day of target){$('prog').textContent=`Process_Total を作成中… ${day}`;await new Promise(r=>setTimeout(r,30));const parts=[];
+    const go=async arr=>{const buf=await buildTotal(arr);if(buf.byteLength>LIMIT&&arr.length>1){const h=Math.ceil(arr.length/2);await go(arr.slice(0,h));await go(arr.slice(h))}else parts.push(buf)};
+    await go(ws.filter(w=>w.date===day));const base=`Process_Total_${day.replace(/-/g,'')}`;
+    for(let i=0;i<parts.length;i++){out.push({name:parts.length>1?`${base}_${i+1}.xlsx`:`${base}.xlsx`,blob:new Blob([parts[i]]),size:parts[i].byteLength});files++;bytes+=parts[i].byteLength}}
+  if(out.length===1)await saveBlob(out[0].blob,out[0].name);
+  else{// ブラウザは連続ダウンロードを止めるため、1 ファイルずつボタンで保存する
+    $('pending').innerHTML=`<p class="note" style="margin:10px 0 6px">${out.length} ファイルを作成しました。1 つずつ保存してください。</p><div class="row">${out.map((o,i)=>`<button class="xbtn" data-p="${i}">${XICON}${esc(o.name)}(${(o.size/1048576).toFixed(1)} MB)</button>`).join('')}</div>`;
+    $('pending').querySelectorAll('[data-p]').forEach(b=>b.onclick=async()=>{const o=out[+b.dataset.p];await saveBlob(o.blob,o.name);b.style.opacity=.5;b.insertAdjacentText('beforeend',' ✓')})}
+  $('prog').textContent=`Process_Total を ${files} ファイルで保存(${target.length} 日分、${(bytes/1048576).toFixed(1)} MB)`}
 async function loadTotal(buf,name){const wb=new ExcelJS.Workbook();await wb.xlsx.load(buf);const a=wb.getWorksheet('Wafers'),raw=wb.getWorksheet('Raw');if(!a||!raw)return 0;
   const cols=a.getRow(1).values.slice(1);const map={};const jobs={};
   a.eachRow((r,i)=>{if(i===1)return;const v=r.values.slice(1);const w={info:{},steps:{},common:{}};cols.forEach((c,j)=>w[c]=v[j]==null?'':String(v[j]));w.dummy=w.dummy==='1';
     if(w.jobSysLot){const j=jobs[w.jobSysLot]||(jobs[w.jobSysLot]={sysLot:w.jobSysLot,wafers:+w.jobWafers||0,list:[],folder:w.folder,lotId:w.lot,cj:w.cj,recipe:w.recipe});j.list.push(w.id);w.job=j}map[w.key]=w});
-  raw.eachRow((r,i)=>{if(i===1)return;const[key,sec,cap,unit,cat,step,value]=r.values.slice(1);const w=map[key];if(!w)return;const k=sec+'|'+cap;
-    if(step===''||step==null)w.common[k]={sec,cap,unit:unit||'',cat,value:num(value)};else{const o=w.steps[k]||(w.steps[k]={sec,cap,unit:unit||''});(o[cat]||(o[cat]=[]))[+step-1]=num(value)}});
+  const rh=raw.getRow(1).values.slice(1);const st=rh.map((h,i)=>/^Step(\d+)$/.test(h)?[+h.slice(4),i]:null).filter(Boolean);
+  raw.eachRow((r,i)=>{if(i===1)return;const v=r.values.slice(1);const[key,sec,cap,unit,cat,value]=v;const w=map[key];if(!w)return;const k=sec+'|'+cap;
+    if(value!=null&&value!=='')w.common[k]={sec,cap,unit:unit||'',cat,value:num(value)};else{const o=w.steps[k]||(w.steps[k]={sec,cap,unit:unit||''});const arr=[];for(const[n,j]of st)arr[n-1]=num(v[j]);o[cat]=arr}});
   const ws=Object.values(map).map(w=>{const j=w.job,d=w.dummy;finalizeWafer(w);w.dummy=d;w.job=j;return w});mergeWafers(ws,name);
   for(const j of Object.values(jobs))DB.jobs.push(j);return ws.length}
 
@@ -734,10 +746,10 @@ async function walkEntries(items){const out=[];const walk=async(e,path)=>{if(e.i
   else if(e.isDirectory){const rd=e.createReader();let batch;do{batch=await new Promise((res,rej)=>rd.readEntries(res,rej));for(const c of batch)await walk(c,path+e.name+'/')}while(batch.length)}};
   const ents=[...items].map(it=>it.webkitGetAsEntry&&it.webkitGetAsEntry()).filter(Boolean);for(const e of ents)await walk(e,'');return out}
 async function importList(list){if(!list.length)return;const dir=p=>p.includes('/')?p.slice(0,p.lastIndexOf('/')):'(直接選択)';
-  const kind=n=>/ProcessLog_Job\.(csv|cvs)$/i.test(n)?'job':/ProcessLog_Summary\.(csv|cvs)$/i.test(n)?'sum':/^ProcessLog_.+\.(csv|cvs)$/i.test(n)?'det':/^Process_Total.*\.xlsx$/i.test(n)?'total':null;
+  const kind=n=>/ProcessLog_Job\.(csv|cvs)$/i.test(n)?'job':/ProcessLog_Summary\.(csv|cvs)$/i.test(n)?'sum':/^ProcessLog_.+\.(csv|cvs)$/i.test(n)?'det':/\.xlsx$/i.test(n)?'total':null;
   const items=list.map(x=>({...x,kind:kind(x.file.name)})).filter(x=>x.kind);const skipped=list.length-items.length;
   const errors=[];const jobsBy={},sumBy={};const newW=[];let done=0;const tot=items.length;
-  for(const it of items.filter(x=>x.kind==='total')){try{const n=await loadTotal(await it.file.arrayBuffer(),it.file.name);toast(`${it.file.name} から ${n} 枚を復元`)}catch(e){errors.push([it.path,'Process_Total を読めません: '+e.message])}done++}
+  for(const it of items.filter(x=>x.kind==='total')){try{const n=await loadTotal(await it.file.arrayBuffer(),it.file.name);if(n)toast(`${it.file.name} から ${n} 枚を復元`);else errors.push([it.path,'Process_Total 形式(Wafers / Raw シート)ではありません'])}catch(e){errors.push([it.path,'Process_Total を読めません: '+e.message])}done++}
   for(const it of items.filter(x=>x.kind==='job'||x.kind==='sum')){try{const t=decodeBuf(await it.file.arrayBuffer());const d=dir(it.path);
       if(it.kind==='job')(jobsBy[d]=jobsBy[d]||[]).push(...parseJob(t,d));else(sumBy[d]=sumBy[d]||[]).push(...parseSummary(t,d))}catch(e){errors.push([it.path,e.message])}done++}
   const jdirs=Object.keys({...jobsBy,...sumBy}).sort((a,b)=>b.length-a.length);
