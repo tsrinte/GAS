@@ -1,7 +1,7 @@
 """オフライン配布用の単一 HTML を作る。
 
 CMP_LogAnalyzer.html(CDN から ExcelJS を読む版)を元に、
-vendor/ のライブラリ(ExcelJS, html-to-image)を埋め込み、HTML の骨組みを付けて dist/ に出力する。
+vendor/ のライブラリ(ExcelJS, html-to-image, JSZip)を埋め込み、HTML の骨組みを付けて dist/ に出力する。
 インターネットがない PC でもブラウザで開くだけで動く。
 
 使い方: python3 build.py
@@ -13,6 +13,7 @@ SRC = ROOT / "CMP_LogAnalyzer.html"
 LIBS = {
     '<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>': ROOT / "vendor" / "exceljs.min.js",
     '<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>': ROOT / "vendor" / "html-to-image.min.js",
+    '<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>': ROOT / "vendor" / "jszip.min.js",
 }
 OUT = ROOT / "dist" / "CMP_LogAnalyzer_offline.html"
 body = SRC.read_text(encoding="utf-8")

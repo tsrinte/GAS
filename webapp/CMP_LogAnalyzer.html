@@ -101,10 +101,22 @@ tr.dev td{background:var(--crit-soft)}
 .pill.info{background:var(--accent-soft);color:var(--accent)}
 .chip{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:99px;padding:2px 10px;cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.heatwrap{overflow-x:auto;margin:4px 0 6px}
+.heatwrap{overflow:auto;margin:4px 0 6px;max-height:420px;border:1px solid var(--line);border-radius:4px}
+.heatwrap svg{display:block}
 .heatwrap svg text{font-family:var(--mono);font-size:10px;fill:var(--mute)}
-.heatwrap rect.c{cursor:pointer}
-.heatwrap rect.c:hover{stroke:var(--ink);stroke-width:1.5}
+.hax{position:sticky;top:0;z-index:1;background:var(--panel);border-bottom:1px solid var(--line)}
+.heatwrap g.c{cursor:pointer}
+.heatwrap g.c:hover rect{stroke:var(--ink);stroke-width:1.5}
+.pn{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line)}
+.pn:first-child{margin-top:0;padding-top:0;border-top:0}
+.pnh{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;font-size:13px;margin:0 0 2px}
+.pnh span{font-size:11px;color:var(--mute)}
+.mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:8px 16px}
+.mph{font-size:12px;font-weight:700;margin-top:4px}
+.abl{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:11px;color:var(--mute);margin-top:6px}
+.abl i{display:inline-block;width:18px;height:4px;border-radius:2px;margin-right:3px;vertical-align:middle}
+.u{font-family:var(--mono);color:var(--ink);font-size:11px}
+.empty{padding:28px 10px;text-align:center;color:var(--mute);font-size:13px;border:1px dashed var(--line);border-radius:6px}
 .scale{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--mute)}
 .scale i{width:12px;height:12px;border-radius:2px;display:inline-block}
 .cnt td,.cnt th{padding:5px 6px;font-size:12px}
@@ -115,6 +127,8 @@ tr.dev td{background:var(--crit-soft)}
 .btn{font:inherit;font-weight:700;border:0;background:var(--accent);color:var(--accent-ink);padding:7px 14px;border-radius:4px;cursor:pointer}
 .btn.sec{background:transparent;border:1px solid var(--accent);color:var(--accent)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.danger{background:transparent;border:1px solid var(--crit);color:var(--crit)}
+.btn.danger.armed{background:var(--crit);color:var(--panel)}
 .split{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start}
 @media(max-width:1100px){.split{grid-template-columns:minmax(0,1fr)}}
 .over{outline:3px dashed var(--accent);outline-offset:-3px}
@@ -146,14 +160,14 @@ tr.dev td{background:var(--crit-soft)}
 .lnk{font:inherit;font-size:12px;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
 .row{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:6px;font-size:13px;z-index:20;max-width:90vw}
-.src{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:12px}
+.src{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 @media(max-width:1000px){.src{grid-template-columns:minmax(0,1fr)}}
-.srcc{border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.srcc{border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
 .srcc h3{margin:0;font-size:14px}
 .srcc p{margin:0;font-size:12px;color:var(--mute)}
-.dz{border:2px dashed var(--accent);border-radius:8px;background:var(--accent-soft);min-height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px;text-align:center;color:var(--ink);cursor:pointer;transition:background .15s}
-.dz svg{width:56px;height:56px;color:var(--accent)}
-.dz b{font-size:14px}
+.dz{border:2px dashed var(--accent);border-radius:8px;background:var(--accent-soft);min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px;text-align:center;color:var(--ink);cursor:pointer;transition:background .15s}
+.dz svg{width:40px;height:40px;color:var(--accent)}
+.dz b{font-size:13px}
 .dz small{color:var(--mute);font-size:12px}
 .dz.over{background:var(--sel);outline:none}
 .pend{font-size:12px;color:var(--warn);font-weight:700}
@@ -206,17 +220,25 @@ details summary{cursor:pointer;font-size:12px;color:var(--accent);font-weight:70
     <div class="sh"><h2>項目別日次推移 <span class="note" id="chartRange" style="margin-left:6px"></span></h2>
       <div class="tools nosnap"><button class="ibtn s" id="snapChart" title="グラフをスクリーンショットで保存"></button><button class="ibtn x" id="expChart" title="グラフの値を Excel で出力"></button></div></div>
     <div class="ctl nosnap">
-      <label class="f">項目<select id="cap" style="max-width:300px"></select></label>
-      <div class="f">単位<span class="ro" id="unit">-</span></div>
-      <label class="f">値の種類<select id="kind"></select></label>
-      <label class="f">日次集計<select id="agg"><option value="avg">日平均</option><option value="sum">日合計</option><option value="max">最大</option><option value="min">最小</option></select></label>
-      <label class="f">縦軸<select id="ymode"><option value="auto">自動(差を拡大)</option><option value="zero">0 から</option><option value="man">手動</option></select></label>
-      <span class="f" id="ymanBox" hidden>縦軸の範囲<span class="inl"><input type="number" id="ymin" step="any" aria-label="縦軸 最小">〜<input type="number" id="ymax" step="any" aria-label="縦軸 最大"></span></span>
-      <div class="f">グラフの高さ<span class="inl"><input type="range" id="yh" min="160" max="800" step="10" value="300" aria-label="グラフの高さ(スライダー)"><input type="number" id="yhn" min="160" max="800" step="10" value="300" aria-label="グラフの高さ(px)">px</span></div>
+      <label class="f">対象日<select id="cday"></select></label>
+      <span class="f" id="wBox" hidden>ウェーハ範囲(時刻順)<span class="inl"><select id="w0" aria-label="最初のウェーハ" style="max-width:250px"></select>〜<select id="w1" aria-label="最後のウェーハ" style="max-width:250px"></select></span></span>
+      <label class="f" id="dStepBox" hidden>Step(ProcessLog)<select id="dstep"></select></label>
+      <label class="f">値の種類<select id="kind"><option>Act</option><option>Set</option><option>Max</option><option>Min</option></select></label>
+      <label class="f" id="aggBox">日次集計<select id="agg"><option value="avg">日平均</option><option value="sum">日合計</option><option value="max">最大</option><option value="min">最小</option></select></label>
+      <label class="f">縦軸<select id="ymode"><option value="auto">自動(差を拡大)</option><option value="zero">0 から</option><option value="man">手動(項目1)</option></select></label>
+      <span class="f" id="ymanBox" hidden>縦軸の範囲(項目1)<span class="inl"><input type="number" id="ymin" step="any" aria-label="縦軸 最小">〜<input type="number" id="ymax" step="any" aria-label="縦軸 最大"></span></span>
+      <div class="f">グラフ 1 つの高さ<span class="inl"><input type="range" id="yh" min="160" max="800" step="10" value="260" aria-label="グラフの高さ(スライダー)"><input type="number" id="yhn" min="160" max="800" step="10" value="260" aria-label="グラフの高さ(px)">px</span></div>
     </div>
-    <div class="chartwrap" id="chartWrap"><svg id="chart" width="100%" role="img" aria-label="項目別日次推移グラフ"></svg><div class="tip" id="tip" hidden></div></div>
+    <div class="ctl nosnap">
+      <label class="f"><span>項目1 <span class="u" id="u1"></span></span><select id="it1" style="max-width:250px"></select></label>
+      <label class="f"><span>項目2 <span class="u" id="u2"></span></span><select id="it2" style="max-width:250px"></select></label>
+      <label class="f"><span>項目3 <span class="u" id="u3"></span></span><select id="it3" style="max-width:250px"></select></label>
+      <label class="f"><span>項目4 <span class="u" id="u4"></span></span><select id="it4" style="max-width:250px"></select></label>
+      <label class="f"><span>項目5 <span class="u" id="u5"></span></span><select id="it5" style="max-width:250px"></select></label>
+    </div>
+    <div class="chartwrap" id="chartWrap"><div id="panels"></div><div class="tip" id="tip" hidden></div></div>
     <div class="legend" id="legend"></div>
-    <p class="note">赤い丸印は、その日のテーブル間平均から ±10% 以上離れた点です。マウスを重ねると値と差が出ます。凡例をクリックするとテーブルを外したり戻したりできます。</p>
+    <p class="note" id="chartNote"></p>
   </section>
 
   <section class="p" id="devSec">
@@ -225,10 +247,11 @@ details summary{cursor:pointer;font-size:12px;color:var(--accent);font-weight:70
       <label class="f">項目<select id="devCap" style="max-width:280px"><option value="">すべて</option></select></label>
       <div class="f">乖離のしきい値<span class="inl">±<input type="number" id="devTh" min="0" max="20" step="1" value="10" aria-label="乖離のしきい値">%<input type="range" id="devThR" min="0" max="20" step="1" value="10" aria-label="乖離のしきい値(スライダー)" style="width:110px"></span></div>
       <div class="f">ヒートマップ<div class="row" id="heatTabs" style="gap:4px"></div></div>
+      <label class="f">表示の高さ<select id="heatH"><option value="240">コンパクト</option><option value="420" selected>標準</option><option value="0">すべて表示</option></select></label>
     </div>
-    <div class="heatwrap" id="heatWrap"><svg id="heat" width="100%" role="img" aria-label="日付と時間帯ごとの乖離件数"></svg></div>
+    <div class="heatwrap" id="heatWrap"><div class="hax"><svg id="heatAx" width="100%" aria-hidden="true"></svg></div><svg id="heat" width="100%" role="img" aria-label="日付と時間帯ごとの乖離件数"></svg></div>
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
-      <span class="note" style="margin:0">各マスは 1 時間。色が濃いほど乖離の件数が多い時間帯です。マスをクリックすると下の表を絞り込みます。</span>
+      <span class="note" style="margin:0" id="heatNote">各マスは 1 時間。色が濃いほど乖離の件数が多い時間帯です。新しい日付が上。マスをクリックすると下の表を絞り込みます。</span>
       <span class="scale" id="heatScale"></span></div>
     <div class="row" id="devFilter" style="margin-bottom:6px"></div>
     <div class="tw" style="max-height:360px"><table><thead><tr><th class="l">日付</th><th class="l">時刻</th><th class="l">テーブル</th><th class="l">項目</th><th>Step</th><th>Set</th><th>Act</th><th>乖離</th><th class="l">CJ / スロット</th></tr></thead><tbody id="dev"></tbody></table></div>
@@ -313,13 +336,14 @@ details summary{cursor:pointer;font-size:12px;color:var(--accent);font-weight:70
    <div class="srcc">
      <h3>集計データ(Process_Total)</h3>
      <p>Dashboard の期間内のデータを、日付ごとに Process_Total_日付.xlsx として保存します。1 ファイルが 10MB を超える場合は _1, _2 … に分けます。保存したファイルを左の枠にドロップすると、続きから集計できます。</p>
-     <div class="row"><button class="btn" id="saveTotal">Process_Total を保存</button><button class="btn sec" id="loadSample">サンプルに戻す</button></div>
+     <div class="row"><button class="btn" id="saveTotal">Process_Total を保存</button></div>
      <div id="pending"></div>
    </div>
   </div>
  </section>
  <section class="p">
-  <div class="sh"><h2>取込結果と照合</h2><span class="note" style="margin:0" id="logSum"></span></div>
+  <div class="sh"><h2>取込結果と照合 <span class="note" style="margin-left:6px" id="logSum"></span></h2>
+    <div class="tools"><button class="btn sec" id="loadSample">サンプルに戻す</button><button class="btn danger" id="resetData" title="取り込んだデータをすべて消して、空の状態から始めます(元のファイルには影響しません)">取込データをリセット</button></div></div>
   <div class="tw"><table><thead><tr><th class="l">フォルダ</th><th>Job 行</th><th>Job Wafers 合計</th><th>Summary 行</th><th>詳細 CSV</th><th>Job と紐付け</th><th class="l">照合</th></tr></thead><tbody id="logTbl"></tbody></table></div>
   <p class="note">照合:Job.csv の Wafers 合計、Summary の行数、詳細 CSV の数が一致すれば ✓。一致しない場合は不足しているファイルを確認してください。</p>
   <div id="errBox"></div>
@@ -330,6 +354,7 @@ details summary{cursor:pointer;font-size:12px;color:var(--accent);font-weight:70
 
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 // ===================== CORE-BEGIN =====================
 const norm=s=>String(s??'').normalize('NFKC').replace(/\s+/g,'').toLowerCase();
@@ -421,7 +446,14 @@ function stepValue(w,key,kind,s0=1,s1=99){const o=w.steps[key];if(!o||!o[kind])r
 // その項目が動作している Step(範囲外表示用)
 function activeSteps(w,key){const o=w.steps[key];if(!o)return[];const s=o.Set,ta=timeAct(w),a=o.Act||[];const hasSet=Array.isArray(s)&&s.some(v=>isNum(v)&&v!==0);const out=[];
   for(let i=0;i<w.nSteps;i++){if(hasSet?(isNum(s[i])&&s[i]!==0):(n0(ta[i])>0&&isNum(a[i])&&a[i]!==0))out.push(i+1)}return out}
-function itemValue(w,item,s0,s1){if(!item)return null;if(item.type==='C'){const c=w.common[item.key];return c&&isNum(c.value)?c.value:null}return stepValue(w,item.key,item.kind||'Act',s0,s1)}
+// D.R. で始まる項目は集計 Step 範囲ではなく Dress Step(D.R. 押付荷重 Set > 0 の Step)の値を使う
+const isDR=cap=>/^d\.r\./.test(norm(cap));
+function itemValue(w,item,s0,s1){if(!item)return null;if(item.type==='C'){const c=w.common[item.key];return c&&isNum(c.value)?c.value:null}
+  const o=w.steps[item.key];if(o&&isDR(o.cap)){const ds=dressStep(w);if(ds)return stepValue(w,item.key,item.kind||'Act',ds,ds)}
+  return stepValue(w,item.key,item.kind||'Act',s0,s1)}
+// 1 つの Step の生の値(日別詳細用)
+function rawAt(w,item,step,dr){if(item.type==='C'){const c=w.common[item.key];return c&&isNum(c.value)?c.value:null}
+  const o=w.steps[item.key];if(!o)return null;if(dr&&isDR(o.cap)){const ds=dressStep(w);if(ds)step=ds}const v=(o[item.kind||'Act']||[])[step-1];return isNum(v)?v:null}
 function slurry(w,s0,s1){const ta=timeAct(w);const out={};let used=false;
   for(const L in w.lines){const l=w.lines[L];let time=0,vol=0,on=false;
     for(let i=s0-1;i<s1;i++){if(!isSupply((l.sel||[])[i]))continue;on=true;const tt=n0(ta[i]),f=n0(l.flow?.Act?.[i]);time+=tt;vol+=f*tt/60}
@@ -565,16 +597,16 @@ function initFilters(){
   $('q0').value=$('q1').value=ds[ds.length-1]||'';
   const tg=$('tags');tg.innerHTML='';
   for(const t of TABLES){const b=document.createElement('button');b.className='tag';b.style.setProperty('--c',`var(${TV[t]})`);b.textContent='Table '+t;b.setAttribute('aria-pressed',tablesOn.has(t));
-    b.onclick=()=>{tablesOn.has(t)?tablesOn.delete(t):tablesOn.add(t);b.setAttribute('aria-pressed',tablesOn.has(t));renderDash()};tg.append(b)}
+    b.onclick=()=>{tablesOn.has(t)?tablesOn.delete(t):tablesOn.add(t);b.setAttribute('aria-pressed',tablesOn.has(t));fillWafers();renderDash()};tg.append(b)}
   const acts=KEYS.filter(k=>k.type==='C'||k.kinds.has('Act'));
   const opt=(k,sel)=>`<option value="${esc(k.id)}"${sel?' selected':''}>${esc(keyLabel(k))}</option>`;
   const def=[/^リテーナリング面圧$/,/^スラリ-ラインa圧力$/,/^t\.t\.回転数$/];
   ['ex1','ex2','ex3'].forEach((id,i)=>{$(id).innerHTML='<option value="">(なし)</option>'+acts.map(k=>opt(k,k.type==='S'&&k.sec.startsWith('Polisher_')&&def[i].test(norm(k.cap)))).join('')});
   $('devCap').innerHTML='<option value="">すべて</option>'+KEYS.filter(k=>k.type==='S'&&k.kinds.has('Set')&&k.kinds.has('Act')).map(k=>opt(k)).join('');
-  fillCapSelect();
+  fillCapSelect();fillDay();
   const all=DB.wafers,last=all.reduce((a,w)=>w.start>a?w.start:a,'');const dm=all.filter(w=>w.dummy).length;
   $('lastInfo').innerHTML=all.length?`取込済み:${md(ds[0])}〜${md(ds[ds.length-1])}(${ds.length} 日分)のウェーハ ${all.length.toLocaleString()} 枚<br>全テーブル合計、うち DMY ${dm} 枚 ・ 最新ログ ${esc(last)}`:'まだデータがありません';
-  const b=$('srcBadge');b.textContent=DB.source==='sample'?'サンプルデータ表示中':`PC 取込データ ・ ${all.length} 枚`;b.classList.toggle('real',DB.source!=='sample');
+  const b=$('srcBadge');b.textContent=DB.source==='sample'?'サンプルデータ表示中':DB.source==='empty'||!all.length?'データなし':`PC 取込データ ・ ${all.length} 枚`;b.classList.toggle('real',DB.source==='local'&&all.length>0);
 }
 
 // ===================== CARDS =====================
@@ -600,7 +632,7 @@ function renderCards(){const W=inRange();const R=tableMetrics(W);lastMetrics=R;c
     ...R.letters.map(L=>[`スラリ総流量(${L})`,m=>m.lines[L]?m.lines[L].vol/1000:0,'L',2,m=>m.lines[L]?`供給時間 ${fmt(m.lines[L].time/60,1)} 分`:'']),
     [`Pad温度 Act(Step${R.s1}・全枚数 AVE)`,m=>m.padT,'degC',1],
     ['Pad初期－現在Pad厚み差分',m=>m.padDiff,'mm',3,m=>m.padDiffAvg!=null?`期間 AVE ${fmt(m.padDiffAvg,3)}`:''],
-    ...R.ex.map((e,i)=>[`${e.k.cap} Act`,m=>m.ex[i],e.k.unit||'',1,null,i])];
+    ...R.ex.map((e,i)=>[`${e.k.cap} Act${e.item.type==='S'&&isDR(e.k.cap)?'(Dress Step)':''}`,m=>m.ex[i],e.k.unit||'',1,null,i])];
   const cntFlags=devFlags(ts.map(t=>R.M[t].count));const flags=rows.map(r=>devFlags(ts.map(t=>r[1](R.M[t]))));
   const pct=f=>f==null?'':` title="テーブル平均比 ${f>0?'+':''}${(f*100).toFixed(1)}%"`;
   $('cards').innerHTML=ts.map((t,ti)=>{const m=R.M[t];const jc=m.jobCheck;
@@ -612,60 +644,123 @@ function renderCards(){const W=inRange();const R=tableMetrics(W);lastMetrics=R;c
       return `<div class="kv${f!=null?' hl':''}${exi!=null?' ex':''}"${pct(f)}><span>${esc(r[0])}</span>${out||`<b>${fmt(v,r[3])}<i>${esc(r[2])}</i></b>`}</div>${sub?`<div class="kv sub"><span></span><b>${esc(sub)}</b></div>`:''}`}).join('')}
     <div class="chk-line">${chk}</div></div>`}).join('')||'<p class="note">テーブルが選択されていません。</p>';
   $('cardsNote').innerHTML=`スラリ総流量(A/D…):ﾗｲﾝ○ 選択 が「供給」の Step(集計 Step 範囲内)だけを対象に Σ(ﾗｲﾝ○ 供給流量 Act × 処理時間 Act ÷ 60)。ライン記号は Caption から自動取得。スラリ使用枚数は A・D 同時供給でも 1 枚。Act が空欄の Step は 0。<br>
-  Pad温度:各ウェーハの Step${R.s1}(集計 Step 範囲の終わり)の Act を全枚数で平均。追加項目:範囲内で動作した Step の Act 平均。<br>
+  Pad温度:各ウェーハの Step${R.s1}(集計 Step 範囲の終わり)の Act を全枚数で平均。追加項目:範囲内で動作した Step の Act 平均。D.R. で始まる項目は Dress Step(D.R. 押付荷重 Set > 0 の Step)の値。<br>
   Pad初期－現在Pad厚み差分:Pad P.S時高さ(ﾊﾟｯﾄﾞｻｰﾁ時ﾊﾟｯﾄﾞ.高さ)− Pad厚みセンサー の値を適用(各 Act 値、期間内の最新ウェーハ)。<br><span style="color:var(--crit)">▲</span> はテーブル間の平均から ±10% 以上離れた値。`;
 }
 
-// ===================== CHART =====================
-function fillCapSelect(){const W=DB.wafers;const cur=$('cap').value;const[s0,s1]=RANGE();
+// ===================== CHART(項目 1〜5 / 日別詳細 / エアバッグ圧力セット) =====================
+const ITEMS=['it1','it2','it3','it4','it5'];const AIRBAG='SET:airbag';
+function airbagKeys(){const pk=re=>KEYS.find(k=>k.type==='S'&&k.sec.startsWith('Polisher_')&&re.test(norm(k.cap)));const out=[];
+  for(let n=1;n<=8;n++){const k=pk(areaRe(n));if(k)out.push({lab:`A${n}P`,k})}const r=pk(RE.rrp);if(r)out.push({lab:'RRP',k:r});return out}
+function fillCapSelect(){const W=DB.wafers;const[s0,s1]=RANGE();
   const score=[];for(const k of KEYS){const kind=k.type==='C'?null:(k.kinds.has('Act')?'Act':[...k.kinds][0]);const it={type:k.type,key:k.key,kind};
     const tm=TABLES.map(t=>mean(W.filter(w=>w.table===t).slice(-200).map(w=>itemValue(w,it,s0,s1)).filter(isNum))).filter(isNum);
     if(tm.length>=2){const m=mean(tm);if(m)score.push([k,(Math.max(...tm)-Math.min(...tm))/Math.abs(m)])}}
   score.sort((a,b)=>b[1]-a[1]);const top=score.filter(s=>s[1]>=0.03).slice(0,12);
   const groups={};for(const k of KEYS)(groups[secLabel(k.sec)]??=[]).push(k);
-  const o=k=>`<option value="${esc(k.id)}">${esc(keyLabel(k))}</option>`;
-  $('cap').innerHTML=(top.length?`<optgroup label="テーブル差が大きい項目">${top.map(([k,s])=>`<option value="${esc(k.id)}">${esc(k.cap)}  (差 ${(s*100).toFixed(0)}%)</option>`).join('')}</optgroup>`:'')+
+  const o=k=>`<option value="${esc(k.id)}">${esc(keyLabel(k))}</option>`;const ab=airbagKeys();
+  const body=(ab.length?`<optgroup label="セット"><option value="${AIRBAG}">エアバッグ圧力セット(ｴﾘｱ1〜8 + ﾘﾃｰﾅﾘﾝｸﾞ面圧)</option></optgroup>`:'')+
+    (top.length?`<optgroup label="テーブル差が大きい項目">${top.map(([k,s])=>`<option value="${esc(k.id)}">${esc(k.cap)}  (差 ${(s*100).toFixed(0)}%)</option>`).join('')}</optgroup>`:'')+
     Object.entries(groups).map(([g,ks])=>`<optgroup label="${esc(g)}">${ks.map(o).join('')}</optgroup>`).join('');
-  const padK=KEYS.find(k=>RE.padT.test(norm(k.cap)));$('cap').value=cur&&keyById(cur)?cur:(padK?padK.id:(KEYS[0]?.id||''));fillKind()}
-function fillKind(){const k=keyById($('cap').value);const cur=$('kind').value;
-  $('kind').innerHTML=k?[...k.kinds].map(x=>`<option>${x}</option>`).join(''):'';if(k&&k.kinds.has(cur))$('kind').value=cur;$('unit').textContent=k&&k.unit?k.unit:'-'}
-let chartData=null;
-function chartSeries(){const k=keyById($('cap').value);if(!k)return null;const[s0,s1]=RANGE();
-  const item={type:k.type,key:k.key,kind:k.type==='C'?null:$('kind').value};const W=inRange();const agg=$('agg').value;
-  const days=[];for(let d=new Date($('d0').value+'T00:00:00Z');d<=new Date($('d1').value+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+1))days.push(d.toISOString().slice(0,10));
-  const ser={};for(const t of TABLES){if(!tablesOn.has(t))continue;ser[t]=days.map(day=>{const v=W.filter(w=>w.table===t&&w.date===day).map(w=>itemValue(w,item,s0,s1)).filter(isNum);if(!v.length)return null;
-    return agg==='sum'?v.reduce((a,b)=>a+b,0):agg==='max'?Math.max(...v):agg==='min'?Math.min(...v):mean(v)})}
-  const vis=Object.keys(ser).filter(t=>chartOn.has(t));const flags={};const flagT=new Set();
-  days.forEach((_,i)=>{const f=devFlags(vis.map(t=>ser[t][i]));vis.forEach((t,j)=>{if(f[j]!=null){(flags[t]??={})[i]=f[j];flagT.add(t)}})});
-  return{k,item,days,ser,vis,flags,flagT,s0,s1}}
-function renderChart(){const svg=$('chart');const D=chartSeries();if(!D){svg.innerHTML='';return}const{k,item,days,ser,vis,flags,flagT}=D;
-  $('chartRange').textContent=k.type==='C'?'(共通値)':`Step${D.s0}〜Step${D.s1} の ${item.kind}`;
-  const H=+$('yh').value,Wd=820,L=56,R=16,T=14,B=30;svg.setAttribute('viewBox',`0 0 ${Wd} ${H}`);svg.style.minWidth='600px';
-  const all=vis.flatMap(t=>ser[t]).filter(isNum);let lo=Math.min(...all),hi=Math.max(...all);const mode=$('ymode').value;
-  if(!all.length){lo=0;hi=1}
+  const padK=KEYS.find(k=>RE.padT.test(norm(k.cap)));
+  ITEMS.forEach((id,i)=>{const el=$(id),cur=el.value;el.innerHTML='<option value="">(なし)</option>'+body;
+    const ok=cur&&(cur===AIRBAG?ab.length:keyById(cur));el.value=ok?cur:''});
+  if(!ITEMS.some(id=>$(id).value))$('it1').value=padK?padK.id:KEYS[0]?.id||'';fillUnits()}
+function kindFor(k){if(k.type==='C')return null;const v=$('kind').value;return k.kinds.has(v)?v:k.kinds.has('Act')?'Act':[...k.kinds][0]}
+function fillUnits(){ITEMS.forEach((id,i)=>{const v=$(id).value,k=v&&v!==AIRBAG?keyById(v):null;
+  $('u'+(i+1)).textContent=v===AIRBAG?'hPa ・ テーブル別':k?(k.unit||'-')+(k.type==='S'&&isDR(k.cap)?' ・ Dress Step':'')+(k.type==='S'&&kindFor(k)!==$('kind').value?` ・ ${kindFor(k)}`:''):''})}
+// 対象日(日別詳細)
+function fillDay(){const ds=dates(),cur=$('cday').value;
+  $('cday').innerHTML='<option value="">全期間(日次推移)</option>'+ds.slice().reverse().map(d=>`<option value="${d}">${md(d)}(${wday(d)})の Job 詳細</option>`).join('');
+  $('cday').value=ds.includes(cur)?cur:'';fillWafers()}
+function dayList(){const d=$('cday').value;if(!d)return[];const dm=$('dmy').value==='1';
+  return DB.wafers.filter(w=>w.date===d&&tablesOn.has(w.table)&&(dm||!w.dummy)).sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:a.table<b.table?-1:a.table>b.table?1:0)}
+function fillWafers(){const on=!!$('cday').value;$('wBox').hidden=$('dStepBox').hidden=!on;$('aggBox').hidden=on;if(!on)return;
+  const L=dayList(),c0=$('w0').value,c1=$('w1').value;
+  const o=L.map(w=>`<option value="${esc(w.key)}">${hhmm(w.start)} ${w.table} s${esc(w.slot||'?')} ${esc(w.cj||'')}</option>`).join('');
+  $('w0').innerHTML=o;$('w1').innerHTML=o;const has=k=>L.some(w=>w.key===k);$('w0').value=has(c0)?c0:L[0]?.key||'';$('w1').value=has(c1)?c1:L[L.length-1]?.key||'';
+  const N=Math.max(1,...L.map(w=>w.nSteps||0)),cs=$('dstep').value;
+  $('dstep').innerHTML=Array.from({length:N},(_,i)=>`<option value="${i+1}">Step${i+1}</option>`).join('')+`<option value="all">全 Step(Step1〜${N} の変化)</option>`;
+  $('dstep').value=cs&&(cs==='all'||+cs<=N)?cs:String(Math.min(RANGE()[1],N))}
+function pickedWafers(){const L=dayList();let a=L.findIndex(w=>w.key===$('w0').value),b=L.findIndex(w=>w.key===$('w1').value);if(a<0)a=0;if(b<0)b=L.length-1;if(a>b)[a,b]=[b,a];return L.slice(a,b+1)}
+function dayRange(){const out=[],a=$('d0').value,b=$('d1').value;if(!a||!b)return out;for(let d=new Date(a+'T00:00:00Z');d<=new Date(b+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+1))out.push(d.toISOString().slice(0,10));return out}
+const AGG={avg:mean,sum:v=>v.reduce((a,b)=>a+b,0),max:v=>Math.max(...v),min:v=>Math.min(...v)};
+// 横軸の定義:期間(日)/ 日別詳細(ウェーハ)/ 日別詳細(Step)。sub(t) はテーブル別グラフ用
+function chartDomain(){const day=$('cday').value;const[s0,s1]=RANGE();
+  if(!day){const days=dayRange(),W=inRange(),f=AGG[$('agg').value]||mean;const by={};for(const w of W)(by[w.table+'|'+w.date]??=[]).push(w);
+    const D={mode:'period',xs:days.map(md),xsub:days.map(wday),full:days,xh:'日付',gap:true,head:i=>`${days[i]}(${wday(days[i])})`,
+      val:(item,t)=>days.map(d=>{const v=(by[t+'|'+d]||[]).map(w=>item.atEnd?rawAt(w,item,s1,false):itemValue(w,item,s0,s1)).filter(isNum);return v.length?f(v):null})};
+    D.sub=()=>D;D.label=`${md($('d0').value)}〜${md($('d1').value)} ・ Step${s0}〜Step${s1} ・ ${$('agg').selectedOptions[0].text}`;return D}
+  const P=pickedWafers(),st=$('dstep').value;
+  if(st==='all'){const N=Math.max(1,...P.map(w=>w.nSteps||0));const steps=Array.from({length:N},(_,i)=>i+1);
+    const D={mode:'profile',xs:steps.map(s=>'Step'+s),xsub:null,full:steps.map(s=>'Step'+s),xh:'Step',gap:true,head:i=>`Step${i+1}(選択ウェーハの平均)`,
+      val:(item,t)=>steps.map(s=>mean(P.filter(w=>w.table===t).map(w=>rawAt(w,item,s,false)).filter(isNum)))};
+    D.sub=()=>D;D.label=`${md(day)}(${wday(day)}) ・ ${P.length} 枚の平均 ・ Step1〜Step${N}`;return D}
+  const step=+st;
+  const mk=L=>({mode:'wafer',xs:L.map(w=>'s'+(w.slot||'?')),xsub:L.map(w=>hhmm(w.start)),full:L.map(w=>`${hhmm(w.start)} Table${w.table} s${w.slot||'?'} ${w.cj||''}`),xh:'ウェーハ',gap:false,
+    head:i=>`${hhmm(L[i].start)} ・ Table ${L[i].table} ・ s${esc(L[i].slot||'?')}<div style="font-weight:400;color:var(--mute);font-size:11px">${esc(L[i].cj)} / ${esc(L[i].id)}</div>`,
+    val:(item,t)=>L.map(w=>w.table===t?rawAt(w,item,step,true):null)});
+  const D=mk(P);D.sub=t=>mk(P.filter(w=>w.table===t));D.label=`${md(day)}(${wday(day)}) ・ ${P.length} 枚 ・ Step${step}`;return D}
+function yRange(all,useMan){let lo=Math.min(...all),hi=Math.max(...all);const mode=$('ymode').value;if(!all.length){lo=0;hi=1}
   if(mode==='zero'){lo=Math.min(0,lo);hi=hi>0?hi*1.08:1}
-  else if(mode==='man'){const a=parseFloat($('ymin').value),b=parseFloat($('ymax').value);if(isFinite(a))lo=a;if(isFinite(b))hi=b}
+  else if(mode==='man'&&useMan){const a=parseFloat($('ymin').value),b=parseFloat($('ymax').value);if(isFinite(a))lo=a;if(isFinite(b))hi=b}
   else{const p=(hi-lo)*0.12||Math.abs(hi)*0.05||1;lo-=p;hi+=p}
-  if(hi<=lo)hi=lo+1;if(mode!=='man'){$('ymin').value=+lo.toPrecision(4);$('ymax').value=+hi.toPrecision(4)}
-  const x=i=>L+(Wd-L-R)*(days.length>1?i/(days.length-1):0.5),y=v=>T+(H-T-B)*(1-(Math.min(hi,Math.max(lo,v))-lo)/(hi-lo));
-  let s='';for(const v of niceTicks(lo,hi,Math.max(3,Math.round(H/60)))){if(v<lo||v>hi)continue;s+=`<line x1="${L}" x2="${Wd-R}" y1="${y(v)}" y2="${y(v)}" stroke="${css('--line')}"/><text x="${L-6}" y="${y(v)+3}" text-anchor="end">${+v.toPrecision(6)}</text>`}
-  const step=Math.ceil(days.length/12);days.forEach((d,i)=>{if(i%step===0)s+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle">${md(d)}</text>`});
-  s+=`<text x="6" y="11">${esc(k.unit||'-')}</text>`;
-  for(const t of vis){const c=css(TV[t]);let seg=[],paths='';const flush=()=>{if(seg.length>1)paths+=`<polyline fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" points="${seg.join(' ')}"/>`;seg=[]};
-    ser[t].forEach((v,i)=>{if(v==null){flush();return}seg.push(x(i).toFixed(1)+','+y(v).toFixed(1))});flush();s+=paths;
-    ser[t].forEach((v,i)=>{if(v==null)return;const f=flags[t]?.[i];s+=`<circle cx="${x(i)}" cy="${y(v)}" r="${f!=null?3.5:2.5}" fill="${c}"/>`;
-      if(f!=null)s+=`<circle cx="${x(i)}" cy="${y(v)}" r="7.5" fill="none" stroke="${css('--crit')}" stroke-width="1.8"/>`})}
-  s+=`<line id="cursor" x1="0" x2="0" y1="${T}" y2="${H-B}" stroke="${css('--mute')}" stroke-dasharray="3 3" visibility="hidden"/><rect id="hit" x="${L}" y="${T}" width="${Wd-L-R}" height="${H-T-B}" fill="transparent"/>`;
-  svg.innerHTML=s;chartData=D;
-  $('legend').innerHTML=TABLES.filter(t=>ser[t]).map(t=>`<button class="lg${flagT.has(t)?' flag':''}" style="--c:var(${TV[t]})" data-t="${t}" aria-pressed="${chartOn.has(t)}">Table ${t}${flagT.has(t)?' ⚠':''}</button>`).join('');
+  if(hi<=lo)hi=lo+1;return[lo,hi]}
+const hex2=h=>{h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');return[0,2,4].map(i=>parseInt(h.slice(i,i+2),16))};
+const mix=(a,b,t)=>{const A=hex2(a),B=hex2(b);return'#'+A.map((v,i)=>Math.round(B[i]+(v-B[i])*t).toString(16).padStart(2,'0')).join('')};
+// 1 枚のグラフを描く。P={xs,xsub,head,series:[{name,color,vals,flags,w,dash,end}],unit,yr,W,H,gap,mini,foot}
+function drawSvg(svg,P){const{W,H}=P,n=P.xs.length,L=50,R=P.ends?42:14,T=12,B=P.xsub?36:24;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width','100%');svg.style.minWidth=(P.mini?340:600)+'px';svg.style.display='block';const[lo,hi]=P.yr;
+  const x=i=>L+(W-L-R)*(n>1?i/(n-1):0.5),y=v=>T+(H-T-B)*(1-(Math.min(hi,Math.max(lo,v))-lo)/(hi-lo));
+  let s='';for(const v of niceTicks(lo,hi,Math.max(3,Math.round(H/60)))){if(v<lo||v>hi)continue;s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="${css('--line')}"/><text x="${L-6}" y="${y(v)+3}" text-anchor="end">${+v.toPrecision(6)}</text>`}
+  const every=Math.max(1,Math.ceil(n/(P.mini?7:14)));
+  P.xs.forEach((d,i)=>{if(i%every)return;s+=`<text x="${x(i)}" y="${H-B+14}" text-anchor="middle">${esc(d)}</text>`+(P.xsub?`<text x="${x(i)}" y="${H-B+27}" text-anchor="middle" style="font-size:9px">${esc(P.xsub[i])}</text>`:'')});
+  s+=`<text x="4" y="10">${esc(P.unit||'-')}</text>`;const ends=[];
+  for(const se of P.series){let seg=[],paths='';const flush=()=>{if(seg.length>1)paths+=`<polyline fill="none" stroke="${se.color}" stroke-width="${se.w||2}"${se.dash?` stroke-dasharray="${se.dash}"`:''} stroke-linejoin="round" points="${seg.join(' ')}"/>`;seg=[]};
+    se.vals.forEach((v,i)=>{if(v==null){if(P.gap)flush();return}seg.push(x(i).toFixed(1)+','+y(v).toFixed(1))});flush();s+=paths;
+    se.vals.forEach((v,i)=>{if(v==null)return;const f=se.flags?.[i];if(se.nodot&&f==null)return;s+=`<circle cx="${x(i)}" cy="${y(v)}" r="${f!=null?3.5:(n>150?1.6:2.5)}" fill="${se.color}"/>`;
+      if(f!=null)s+=`<circle cx="${x(i)}" cy="${y(v)}" r="7.5" fill="none" stroke="${css('--crit')}" stroke-width="1.8"/>`});
+    if(P.ends){let li=-1;se.vals.forEach((v,i)=>{if(v!=null)li=i});if(li>=0)ends.push({y:y(se.vals[li]),t:se.name,c:se.color})}}
+  ends.sort((a,b)=>a.y-b.y);for(let i=1;i<ends.length;i++)if(ends[i].y-ends[i-1].y<8)ends[i].y=ends[i-1].y+8;
+  const over=ends.length?ends[ends.length-1].y-(H-B):0;if(over>0)ends.forEach(e=>e.y=Math.max(T,e.y-over));
+  ends.forEach(e=>s+=`<text x="${W-R+5}" y="${e.y+3}" style="fill:${e.c};font-weight:700;font-size:9px">${esc(e.t)}</text>`);
+  if(!P.series.some(se=>se.vals.some(isNum)))s+=`<text x="${(L+W-R)/2}" y="${(T+H-B)/2}" text-anchor="middle" style="font-size:12px">この範囲のデータはありません</text>`;
+  s+=`<line class="cur" x1="0" x2="0" y1="${T}" y2="${H-B}" stroke="${css('--mute')}" stroke-dasharray="3 3" visibility="hidden"/><rect class="hit" x="${L}" y="${T}" width="${Math.max(1,W-L-R)}" height="${H-T-B}" fill="transparent"/>`;
+  svg.innerHTML=s;const hit=svg.querySelector('.hit'),cur=svg.querySelector('.cur'),tip=$('tip'),wrap=$('chartWrap');
+  hit.onmousemove=e=>{if(!n)return;const r=svg.getBoundingClientRect();const sx=(e.clientX-r.left)*(W/r.width);const i=Math.max(0,Math.min(n-1,Math.round((sx-L)/((W-L-R)/Math.max(1,n-1)))));
+    cur.setAttribute('x1',x(i));cur.setAttribute('x2',x(i));cur.setAttribute('visibility','visible');
+    tip.innerHTML=`<div style="font-weight:700;margin-bottom:3px">${P.head(i)}</div>`+P.series.map(se=>{const v=se.vals[i],f=se.flags?.[i];if(v==null&&P.skipNull)return'';
+      return `<div style="display:flex;justify-content:space-between;gap:10px;color:${se.color}"><span>${esc(se.name)}</span><b>${v==null?'—':fmt(v,2)}${f!=null?` <span class="pill crit">${f>0?'+':''}${(f*100).toFixed(1)}%</span>`:''}</b></div>`}).join('')+(P.foot?`<div style="color:var(--mute);font-size:11px;margin-top:3px">${P.foot}</div>`:'');
+    tip.hidden=false;const wr=wrap.getBoundingClientRect();let lx=e.clientX-wr.left+14+wrap.scrollLeft;if(lx+200>wr.width+wrap.scrollLeft)lx-=220;tip.style.left=lx+'px';tip.style.top=(e.clientY-wr.top+10)+'px'};
+  hit.onmouseleave=()=>{tip.hidden=true;cur.setAttribute('visibility','hidden')}}
+let chartPanels=[];
+function renderChart(){fillUnits();const box=$('panels');const D=chartDomain();const H=+$('yh').value;const W=820;
+  const shown=TABLES.filter(t=>tablesOn.has(t)),vis=shown.filter(t=>chartOn.has(t));$('chartRange').textContent=D.label;chartPanels=[];
+  const specs=[];ITEMS.forEach(id=>{const v=$(id).value;if(!v)return;if(v===AIRBAG){const ab=airbagKeys();if(ab.length)specs.push({ab});return}
+    const k=keyById(v);if(k)specs.push({k,item:{type:k.type,key:k.key,kind:kindFor(k)}})});
+  if(!specs.length||!D.xs.length){box.innerHTML=`<div class="empty">${!DB.wafers.length?'データがありません。ProcessLog取込 から取り込むと表示されます。':!specs.length?'項目 1〜5 から表示する項目を選んでください。':'この条件のデータはありません。'}</div>`;$('legend').innerHTML='';$('chartNote').textContent='';return}
+  box.innerHTML=specs.map((sp,i)=>sp.ab?`<div class="pn"><div class="pnh"><b>エアバッグ圧力セット</b><span>ｴﾘｱ1〜8 ｴｱﾊﾞｯｸﾞ圧力 + ﾘﾃｰﾅﾘﾝｸﾞ面圧 ・ ${esc($('kind').value)} ・ hPa${D.mode==='period'?` ・ Step${RANGE()[1]}(集計 Step 範囲の終わり)の値`:''} ・ テーブル別(縦軸は 4 テーブル共通)</span></div>
+      <div class="mini">${vis.map(t=>`<div><div class="mph" style="color:var(${TV[t]})">Table ${t}</div><svg data-p="${i}" data-t="${t}"></svg></div>`).join('')||'<p class="note">テーブルが選択されていません。</p>'}</div>
+      <div class="abl">線の色:${sp.ab.map((a,j)=>`<span><i style="background:${mix(css('--ink'),css('--panel'),a.lab==='RRP'?1:0.25+0.6*j/Math.max(1,sp.ab.length-2))}"></i>${a.lab}</span>`).join('')}<span>(淡い色ほど内側のエリア、RRP は破線)</span></div></div>`
+    :`<div class="pn"><div class="pnh"><b>${esc(sp.k.cap)}</b><span>${esc(secLabel(sp.k.sec))} ・ ${esc(sp.item.kind||'共通値')} ・ ${esc(sp.k.unit||'-')}${sp.k.type==='S'&&isDR(sp.k.cap)&&D.mode!=='profile'?' ・ Dress Step の値':''}</span></div><svg data-p="${i}"></svg></div>`).join('');
+  const flagT=new Set();let first=true;
+  specs.forEach((sp,i)=>{
+    if(sp.ab){const per=vis.map(t=>{const dm=D.sub(t);const ser=sp.ab.map((a,j)=>{const it={type:'S',key:a.k.key,kind:kindFor(a.k),atEnd:true};const rrp=a.lab==='RRP';
+        return{name:a.lab,vals:dm.val(it,t),color:mix(css(TV[t]),css('--panel'),rrp?1:0.25+0.6*j/Math.max(1,sp.ab.length-2)),w:rrp?2.4:1.8,dash:rrp?'6 3':'',nodot:true}});return{t,dm,ser}});
+      const yr=yRange(per.flatMap(p=>p.ser.flatMap(s=>s.vals)).filter(isNum),false);
+      for(const p of per){drawSvg(box.querySelector(`svg[data-p="${i}"][data-t="${p.t}"]`),{xs:p.dm.xs,xsub:p.dm.xsub,head:p.dm.head,series:p.ser,unit:'hPa',yr,W:440,H:Math.max(180,Math.round(H*0.85)),gap:p.dm.gap,mini:true,ends:true,foot:`Table ${p.t} ・ ${esc($('kind').value)} [hPa]`});
+        chartPanels.push({name:`エアバッグ_${p.t}`,title:`エアバッグ圧力セット Table ${p.t}`,unit:'hPa',xh:p.dm.xh,xs:p.dm.full,cols:p.ser})}
+      return}
+    const ser=vis.map(t=>({name:'Table '+t,t,color:css(TV[t]),vals:D.val(sp.item,t),flags:{}}));const nx=D.xs.length;
+    if(D.mode==='wafer'){const m=mean(ser.flatMap(s=>s.vals).filter(isNum));ser.forEach(s=>s.vals.forEach((v,j)=>{if(isNum(v)&&m&&Math.abs(v-m)/Math.abs(m)>=0.1){s.flags[j]=(v-m)/Math.abs(m);flagT.add(s.t)}}))}
+    else for(let j=0;j<nx;j++){const f=devFlags(ser.map(s=>s.vals[j]));ser.forEach((s,q)=>{if(f[q]!=null){s.flags[j]=f[q];flagT.add(s.t)}})}
+    const yr=yRange(ser.flatMap(s=>s.vals).filter(isNum),first);if(first&&$('ymode').value!=='man'){$('ymin').value=+yr[0].toPrecision(4);$('ymax').value=+yr[1].toPrecision(4)}first=false;
+    drawSvg(box.querySelector(`svg[data-p="${i}"]:not([data-t])`),{xs:D.xs,xsub:D.xsub,head:D.head,series:ser,unit:sp.k.unit,yr,W,H,gap:D.gap,skipNull:D.mode==='wafer',foot:`${esc(sp.k.cap)} ${esc(sp.item.kind||'')} [${esc(sp.k.unit||'-')}]`});
+    chartPanels.push({name:sp.k.cap,title:sp.k.cap,unit:sp.k.unit,xh:D.xh,xs:D.full,cols:ser,flags:true})});
+  $('legend').innerHTML=shown.map(t=>`<button class="lg${flagT.has(t)?' flag':''}" style="--c:var(${TV[t]})" data-t="${t}" aria-pressed="${chartOn.has(t)}">Table ${t}${flagT.has(t)?' ⚠':''}</button>`).join('');
   $('legend').querySelectorAll('.lg').forEach(b=>b.onclick=()=>{const t=b.dataset.t;chartOn.has(t)?chartOn.delete(t):chartOn.add(t);renderChart()});
-  const hit=$('hit'),tip=$('tip');
-  hit.onmousemove=e=>{const r=svg.getBoundingClientRect();const sx=(e.clientX-r.left)*(Wd/r.width);const n=days.length;
-    const i=Math.max(0,Math.min(n-1,Math.round((sx-L)/((Wd-L-R)/Math.max(1,n-1)))));const cur=$('cursor');cur.setAttribute('x1',x(i));cur.setAttribute('x2',x(i));cur.setAttribute('visibility','visible');
-    tip.innerHTML=`<div style="font-weight:700;margin-bottom:3px">${days[i]}(${wday(days[i])})</div>`+vis.map(t=>{const v=ser[t][i],f=flags[t]?.[i];return `<div style="display:flex;justify-content:space-between;gap:10px;color:var(${TV[t]})"><span>Table ${t}</span><b>${v==null?'—':fmt(v,2)}${f!=null?` <span class="pill crit">${f>0?'+':''}${(f*100).toFixed(1)}%</span>`:''}</b></div>`}).join('')+`<div style="color:var(--mute);font-size:11px;margin-top:3px">${esc(k.cap)} ${esc(item.kind||'')} [${esc(k.unit||'-')}] ・ ${$('agg').selectedOptions[0].text}</div>`;
-    tip.hidden=false;const wr=$('chartWrap').getBoundingClientRect();let lx=e.clientX-wr.left+14+$('chartWrap').scrollLeft;if(lx+190>wr.width+$('chartWrap').scrollLeft)lx-=210;tip.style.left=lx+'px';tip.style.top=(e.clientY-wr.top+10)+'px'};
-  hit.onmouseleave=()=>{tip.hidden=true;$('cursor').setAttribute('visibility','hidden')};
-}
+  $('chartNote').textContent=(D.mode==='period'?'1 日ごとの値(日次集計)。赤い丸印はその日のテーブル間平均から ±10% 以上離れた点。':D.mode==='wafer'?'対象日のウェーハを時刻順に並べ、選んだ Step の値を表示。赤い丸印は表示中の全ウェーハ平均から ±10% 以上離れた点。':'選んだウェーハの Step1〜最終 Step の値(テーブルごとの平均)。赤い丸印はその Step のテーブル間平均から ±10% 以上離れた点。')
+    +' D.R. で始まる項目は Dress Step の値。マウスを重ねると値が出ます。凡例をクリックするとテーブルを外したり戻したりできます。'}
 function niceTicks(lo,hi,n){const span=hi-lo,raw=span/n,mag=Math.pow(10,Math.floor(Math.log10(raw))),st=[1,2,2.5,5,10].map(m=>m*mag).find(v=>v>=raw)||raw;const out=[];for(let v=Math.ceil(lo/st)*st;v<=hi+1e-9;v+=st)out.push(+v.toFixed(10));return out}
 
 // ===================== DEVIATION =====================
@@ -684,22 +779,29 @@ function renderDev(){const{out,total,th}=devRows();let rows=out;
     +(rows.length>300?`<tr><td class="l" colspan="9" style="color:var(--mute)">新しい順に 300 件を表示(全 ${rows.length} 件)</td></tr>`:'')||'<tr><td class="l" colspan="9">しきい値以上の乖離はありません。</td></tr>';
   renderHeat(out)}
 function renderHeat(out){out=out||devRows().out;
-  const tabs=['',...TABLES.filter(t=>tablesOn.has(t))];if(!tabs.includes(heatTable))heatTable='';
-  $('heatTabs').innerHTML=tabs.map(t=>`<button class="chip" data-t="${t}" aria-pressed="${heatTable===t}">${t?'Table '+t:'全テーブル'}</button>`).join('');
+  const vis=TABLES.filter(t=>tablesOn.has(t));const tabs=['',...vis,'split'];if(!tabs.includes(heatTable))heatTable='';
+  $('heatTabs').innerHTML=tabs.map(t=>`<button class="chip" data-t="${t}" aria-pressed="${heatTable===t}">${t==='split'?'テーブル別(4段)':t?'Table '+t:'全テーブル'}</button>`).join('');
   $('heatTabs').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{heatTable=b.dataset.t;renderHeat()});
-  const rows=heatTable?out.filter(r=>r.w.table===heatTable):out;
-  const days=[];for(let d=new Date($('d0').value+'T00:00:00Z');d<=new Date($('d1').value+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+1))days.push(d.toISOString().slice(0,10));
-  const cnt={},byT={};for(const r of rows){const k=r.w.date+'|'+r.h;cnt[k]=(cnt[k]||0)+1;(byT[k]??={})[r.w.table]=(byT[k][r.w.table]||0)+1}
-  const max=Math.max(0,...Object.values(cnt));const L=74,T=6,cw=27,ch=18,gap=3,W=L+24*(cw+gap)+4,H=T+days.length*(ch+gap)+22;
-  const lv=c=>!c?0:Math.min(5,Math.max(1,Math.ceil(c/max*5)));const op=[0,.22,.4,.6,.8,1];
-  let s='';days.forEach((d,ri)=>{const yy=T+ri*(ch+gap);s+=`<text x="${L-8}" y="${yy+13}" text-anchor="end">${md(d)} ${wday(d)}</text>`;
-    for(let h=0;h<24;h++){const c=cnt[d+'|'+h]||0,l=lv(c);const xx=L+h*(cw+gap);const sel=devCell&&devCell.date===d&&devCell.h===h;
-      const tt=`${md(d)}(${wday(d)}) ${h}時台: ${c} 件`+(c?' ('+Object.entries(byT[d+'|'+h]).map(([t,n])=>`${t} ${n}`).join(' / ')+')':'');
-      s+=`<rect class="c" data-d="${d}" data-h="${h}" x="${xx}" y="${yy}" width="${cw}" height="${ch}" rx="3" fill="${l?css('--heat'):css('--heat0')}" fill-opacity="${l?op[l]:1}"${sel?` stroke="${css('--crit')}" stroke-width="2"`:''}><title>${tt}</title></rect>`}});
-  for(let h=0;h<24;h+=3)s+=`<text x="${L+h*(cw+gap)+cw/2}" y="${H-6}" text-anchor="middle">${h}時</text>`;
-  const svg=$('heat');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.style.minWidth='640px';svg.innerHTML=s;
-  svg.querySelectorAll('rect.c').forEach(r=>r.onclick=()=>{const d=r.dataset.d,h=+r.dataset.h;devCell=devCell&&devCell.date===d&&devCell.h===h?null:{date:d,h,t:heatTable};renderDev()});
-  $('heatScale').innerHTML=`0 <i style="background:var(--heat0)"></i>${[1,2,3,4,5].map(l=>`<i style="background:var(--heat);opacity:${op[l]}"></i>`).join('')} ${max}`}
+  const split=heatTable==='split';const rows=split||!heatTable?out:out.filter(r=>r.w.table===heatTable);const days=dayRange().reverse();
+  const cnt={},byT={};for(const r of rows){const k=r.w.date+'|'+r.h;cnt[split?k+'|'+r.w.table:k]=(cnt[split?k+'|'+r.w.table:k]||0)+1;(byT[k]??={})[r.w.table]=(byT[k][r.w.table]||0)+1}
+  const max=Math.max(0,...Object.values(cnt));const L=74,cw=27,gap=3,W=L+24*(cw+gap)+4;const sub=split?vis:[''],ch=split?14:18,ig=split?1:3,dg=split?8:0;
+  const lv=c=>!c?0:Math.min(5,Math.max(1,Math.ceil(c/max*5)));const op=[0,.22,.4,.6,.8,1];const ink=css('--ink'),pan=css('--panel'),h0=css('--heat0');
+  let s='',yy=4;for(const d of days){const y0=yy;
+    for(const t of sub){for(let h=0;h<24;h++){const k=d+'|'+h,c=cnt[split?k+'|'+t:k]||0,l=lv(c),xx=L+h*(cw+gap);
+        const sel=devCell&&devCell.date===d&&devCell.h===h&&(!split||devCell.t===t);
+        const tt=`${md(d)}(${wday(d)}) ${h}時台${t?' Table '+t:''}: ${c} 件`+(!split&&c?' ('+Object.entries(byT[k]).map(([a,n])=>`${a} ${n}`).join(' / ')+')':'');
+        s+=`<g class="c" data-d="${d}" data-h="${h}" data-t="${t}"><rect x="${xx}" y="${yy}" width="${cw}" height="${ch}" rx="${split?2:3}" fill="${l?(split?css(TV[t]):css('--heat')):h0}" fill-opacity="${l?op[l]:1}"${sel?` stroke="${css('--crit')}" stroke-width="2"`:''}/><title>${tt}</title>`
+          +(split?`<text x="${xx+cw/2}" y="${yy+ch-3.5}" text-anchor="middle" style="font-size:9px;font-weight:700;fill:${l>=3?pan:ink};opacity:${l?1:.3}">${t}</text>`:'')+'</g>'}
+      yy+=ch+ig}
+    yy+=dg-ig+(split?0:ig);s+=`<text x="${L-8}" y="${(y0+yy-dg)/2+4}" text-anchor="end"${split?' style="font-weight:700"':''}>${md(d)} ${wday(d)}</text>`;
+    if(split)s+=`<line x1="4" x2="${W-4}" y1="${yy-dg/2}" y2="${yy-dg/2}" stroke="${css('--line')}"/>`}
+  const H=Math.max(yy,24);const svg=$('heat');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.style.minWidth='640px';
+  svg.innerHTML=days.length?s:`<text x="${W/2}" y="16" text-anchor="middle">データがありません</text>`;
+  let ax='';for(let h=0;h<24;h+=3)ax+=`<text x="${L+h*(cw+gap)+cw/2}" y="13" text-anchor="middle">${h}時</text>`;const a=$('heatAx');a.setAttribute('viewBox',`0 0 ${W} 18`);a.style.minWidth='640px';a.innerHTML=ax;
+  svg.querySelectorAll('g.c').forEach(g=>g.onclick=()=>{const d=g.dataset.d,h=+g.dataset.h,t=split?g.dataset.t:heatTable;devCell=devCell&&devCell.date===d&&devCell.h===h&&devCell.t===t?null:{date:d,h,t};renderDev()});
+  const hv=+$('heatH').value;$('heatWrap').style.maxHeight=hv?hv+'px':'none';
+  $('heatNote').textContent=`各マスは 1 時間。色が濃いほど乖離の件数が多い時間帯です(${days.length} 日分、新しい日付が上)。`+(split?'日付ごとに A〜D の段に分け、マスの文字がテーブルです。':'')+'マスをクリックすると下の表を絞り込みます。';
+  $('heatScale').innerHTML=`0 <i style="background:var(--heat0)"></i>${[1,2,3,4,5].map(l=>`<i style="background:${split?'var(--mute)':'var(--heat)'};opacity:${op[l]}"></i>`).join('')} ${max}`}
 
 // ===================== COUNTERS =====================
 function counterMatrix(){let c0=$('c0').value,c1=$('c1').value;if(c0>c1)[c0,c1]=[c1,c0];
@@ -731,7 +833,7 @@ function renderBars(rows){if(!$('barItem').options.length)return;rows=rows||coun
 // ===================== SAVE / EXPORT =====================
 function stamp(){const d=new Date(),p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`}
 let DL=null;if(window.claude&&window.claude.use)window.claude.use('downloads').then(d=>{DL=d;if(d)$('sandboxNote').hidden=true}).catch(()=>{});
-const MIME={xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',png:'image/png'};
+const MIME={xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',xlsm:'application/vnd.ms-excel.sheet.macroEnabled.12',png:'image/png'};
 async function saveBlob(blob,name){const ext=name.split('.').pop().toLowerCase();
   if(DL){try{await DL.save({filename:name,data:blob});toast(`保存しました: ${name}`)}catch(e){toast(e&&e.code==='declined'?'保存をキャンセルしました':`保存できませんでした(${e&&e.code||'error'})`)}return}
   if(window.showSaveFilePicker&&window.self===window.top){try{const h=await window.showSaveFilePicker({suggestedName:name,types:[{description:ext.toUpperCase(),accept:{[MIME[ext]||'application/octet-stream']:['.'+ext]}}]});
@@ -755,11 +857,12 @@ async function exportTables(ts){if(!window.ExcelJS)return toast('Excel ライブ
       ws.addRow([w.date,w.start,w.cj,w.lot,w.id,w.slot,w.recipe,w.dummy?'DMY':'',sl.used?'○':'',...R.letters.flatMap(L=>[r4(sl.lines[L]?.time??0),r4(sl.lines[L]?.vol??0)]),r4(padTemp(w,R.s1)),r4(padDiff(w)),...R.ex.map(e=>r4(itemValue(w,e.item,R.s0,R.s1))),w.file])}
     styleHeader(ws)}
   await saveWb(wb,`CMP_テーブル集計_${stamp()}.xlsx`)}
-async function exportChart(){if(!window.ExcelJS)return;const D=chartData;if(!D)return;const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet('項目別日次推移');const ts=Object.keys(D.ser);
-  ws.addRow(['日付',...ts.map(t=>'Table '+t),'±10% 以上のテーブル']);
-  D.days.forEach((d,i)=>ws.addRow([d,...ts.map(t=>{const v=D.ser[t][i];return isNum(v)?+v.toFixed(4):''}),ts.filter(t=>D.flags[t]?.[i]!=null).map(t=>`${t}(${(D.flags[t][i]*100).toFixed(1)}%)`).join(' ')]));
-  ws.addRow([]);ws.addRow(['項目',D.k.cap]);ws.addRow(['単位',D.k.unit||'-']);ws.addRow(['値の種類',D.item.kind||'共通値']);ws.addRow(['集計 Step 範囲',`Step${D.s0}〜Step${D.s1}`]);ws.addRow(['日次集計',$('agg').selectedOptions[0].text]);styleHeader(ws);
-  await saveWb(wb,`CMP_日次推移_${D.k.cap.replace(/[\\/:*?"<>|\s]/g,'_')}_${stamp()}.xlsx`)}
+async function exportChart(){if(!window.ExcelJS)return;if(!chartPanels.length)return toast('出力するグラフがありません');const wb=new ExcelJS.Workbook();const used=new Set();
+  for(const p of chartPanels){const nm=String(p.name).replace(/[\\\/?*\[\]:]/g,'_').slice(0,28)||'Sheet';let k=nm,i=2;while(used.has(k))k=nm.slice(0,25)+'_'+i++;used.add(k);const ws=wb.addWorksheet(k);
+    ws.addRow([p.xh,...p.cols.map(c=>c.name),...(p.flags?['±10% 以上']:[])]);
+    p.xs.forEach((x,i)=>ws.addRow([x,...p.cols.map(c=>{const v=c.vals[i];return isNum(v)?+v.toFixed(4):''}),...(p.flags?[p.cols.filter(c=>c.flags?.[i]!=null).map(c=>`${c.name}(${(c.flags[i]*100).toFixed(1)}%)`).join(' ')]:[])]));
+    ws.addRow([]);ws.addRow(['項目',p.title]);ws.addRow(['単位',p.unit||'-']);ws.addRow(['値の種類',$('kind').value]);ws.addRow(['条件',$('chartRange').textContent]);styleHeader(ws)}
+  await saveWb(wb,`CMP_項目別推移_${stamp()}.xlsx`)}
 async function exportCounters(){if(!window.ExcelJS)return;const{rows,c0,c1}=counterMatrix();const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet('消耗品カウンタ');
   ws.addRow(['項目','単位',...TABLES.flatMap(t=>[`Polisher${t} 現在値`,`Polisher${t} 増分`])]);rows.forEach(r=>ws.addRow([r.name,r.unit,...TABLES.flatMap(t=>[r.v[t]??'',r.d[t]??''])]));ws.addRow([]);ws.addRow(['対象期間',`${c0}〜${c1}`]);styleHeader(ws);
   await saveWb(wb,`CMP_消耗品カウンタ_${c1}_${stamp()}.xlsx`)}
@@ -795,7 +898,7 @@ async function loadTotal(buf,name){const wb=new ExcelJS.Workbook();await wb.xlsx
   return ws.length}
 
 // ===================== IMPORT =====================
-function mergeWafers(ws){if(DB.source==='sample')DB={wafers:[],jobs:[],summary:[],folders:{},errors:[],source:'local'};
+function mergeWafers(ws){if(DB.source!=='local')DB={wafers:[],jobs:[],summary:[],folders:{},errors:[],source:'local'};
   const idx=new Map(DB.wafers.map((w,i)=>[w.key,i]));for(const w of ws){if(idx.has(w.key))DB.wafers[idx.get(w.key)]=w;else{idx.set(w.key,DB.wafers.length);DB.wafers.push(w)}}}
 async function walkEntries(items){const out=[];const walk=async(e,path)=>{if(e.isFile){const f=await new Promise((res,rej)=>e.file(res,rej));out.push({file:f,path:path+f.name})}
   else if(e.isDirectory){const rd=e.createReader();let batch;do{batch=await new Promise((res,rej)=>rd.readEntries(res,rej));for(const c of batch)await walk(c,path+e.name+'/')}while(batch.length)}};
@@ -823,12 +926,12 @@ async function importList(list){if(!list.length)return;const dir=p=>p.includes('
 function renderLog(){const fs=Object.entries(DB.folders).sort();
   $('logTbl').innerHTML=fs.map(([f,v])=>{const ok=v.jobWafers===v.details&&v.summary===v.details;const st=ok?'<span class="pill ok">✓ 一致</span>':`<span class="pill warn">⚠ 要確認</span> ${v.jobWafers!==v.details?`Job ${v.jobWafers} ≠ 詳細 ${v.details}`:''} ${v.summary!==v.details?`Summary ${v.summary} ≠ 詳細 ${v.details}`:''}`;
     return `<tr><td class="l">${esc(f)}</td><td>${v.jobs}</td><td>${v.jobWafers}</td><td>${v.summary}</td><td>${v.details}</td><td>${v.linked}</td><td class="l">${st}</td></tr>`}).join('')||'<tr><td class="l" colspan="7">まだ取り込んでいません。</td></tr>';
-  $('logSum').textContent=`${DB.source==='sample'?'サンプル':'PC 取込'} ・ フォルダ ${fs.length} ・ ウェーハ ${DB.wafers.length}`;
+  $('logSum').textContent=`${DB.source==='sample'?'サンプル':DB.source==='empty'?'リセット済み':'PC 取込'} ・ フォルダ ${fs.length} ・ ウェーハ ${DB.wafers.length}`;
   $('errBox').innerHTML=DB.errors.length?`<h2 style="margin-top:14px;font-size:13px;color:var(--crit)">エラー ${DB.errors.length} 件</h2><div class="tw"><table><tbody>${DB.errors.slice(-200).map(([p,m])=>`<tr><td class="l">${esc(p)}</td><td class="l">${esc(m)}</td></tr>`).join('')}</tbody></table></div>`:''}
 
 // ===================== SEQUENCE =====================
 const RH=26;// 行の高さ(px)。表示中の行だけを描画して、行数が多いシートでも軽く動かす
-let SEQ={wb:null,name:'',ws:null,hdrRow:0,lastRow:0,lastCol:0,colKey:{},sel:null,ins:new Map(),undo:[],used:new Map(),hist:[]};
+let SEQ={wb:null,orig:null,name:'',ws:null,hdrRow:0,lastRow:0,lastCol:0,colKey:{},sel:null,ins:new Map(),undo:[],used:new Map(),hist:[]};
 const OFFICE_THEME=['FFFFFF','000000','E7E6E6','44546A','4472C4','ED7D31','A5A5A5','FFC000','5B9BD5','70AD47'];
 function xcolor(c){if(!c)return'';if(c.argb){const h=c.argb.length===8?c.argb.slice(2):c.argb;return'#'+h}if(c.theme!=null&&OFFICE_THEME[c.theme])return'#'+OFFICE_THEME[c.theme];return''}
 function cellStyle(cell){let s='';const f=cell.fill;if(f&&f.type==='pattern'&&f.pattern==='solid'){const c=xcolor(f.fgColor);if(c&&c.toUpperCase()!=='#FFFFFF')s+=`background:${c};`}
@@ -841,10 +944,14 @@ function seqHeaderMap(ws){let hr=0;for(let r=1;r<=Math.min(20,ws.rowCount);r++){
   return{hr,colKey}}
 function cellText(c){const v=c.value;if(v instanceof Date)return v.toISOString().slice(0,10);if(v&&typeof v==='object'&&'result'in v)return String(v.result??'');try{return c.text??''}catch(e){return String(v??'')}}
 async function openSeq(buf,name){$('seqProg').textContent='読み込み中…';await new Promise(r=>setTimeout(r,20));
-  try{const wb=new ExcelJS.Workbook();await wb.xlsx.load(buf);SEQ.wb=wb;SEQ.name=name}catch(e){$('seqProg').textContent='';return toast('ファイルを開けませんでした: '+e.message)}
+  const orig=buf.slice(0);let note='';
+  try{let wb=new ExcelJS.Workbook();try{await wb.xlsx.load(buf)}catch(e){// 表示用だけコメント(メモ)を外して読み直す。保存ファイルには原本のまま残る
+      if(!window.JSZip)throw e;wb=new ExcelJS.Workbook();await wb.xlsx.load(await viewCopy(orig));note='メモ(コメント)は画面に表示していません。保存ファイルにはそのまま残ります。'}
+    SEQ.wb=wb;SEQ.name=name;SEQ.orig=orig}catch(e){$('seqProg').textContent='';return toast('ファイルを開けませんでした: '+e.message)}
+  SEQ.note=note;
   $('seqSheet').innerHTML=SEQ.wb.worksheets.map(w=>`<option>${esc(w.name)}</option>`).join('');const def=SEQ.wb.worksheets.find(w=>w.name==='シーケンス表')||SEQ.wb.worksheets[0];$('seqSheet').value=def.name;
   $('seqName').textContent=name;$('macroNote').hidden=!/\.xlsm$/i.test(name);
-  $('macroNote').textContent='このファイルはマクロ付き(.xlsm)です。保存したファイル(.xlsx)にはマクロが含まれません。元のファイルはそのまま残ります。';
+  $('macroNote').textContent='このファイルはマクロ付き(.xlsm)です。保存も .xlsm のままで、マクロと他のシートはそのまま残ります。元のファイルは変更しません。';
   SEQ.used=new Map();SEQ.hist=[];await selectSheet()}
 async function selectSheet(){$('seqProg').textContent='シートを準備中…';await new Promise(r=>setTimeout(r,10));
   SEQ.ws=SEQ.wb.getWorksheet($('seqSheet').value);const ws=SEQ.ws;const m=seqHeaderMap(ws);SEQ.hdrRow=m.hr;SEQ.colKey=m.colKey;SEQ.sel=null;SEQ.ins=new Map();SEQ.undo=[];SEQ.hist=[];
@@ -852,7 +959,7 @@ async function selectSheet(){$('seqProg').textContent='シートを準備中…'
   let last=ws.rowCount;while(last>SEQ.hdrRow&&!rowHasValue(ws.getRow(last)))last--;SEQ.lastRow=Math.max(last,SEQ.hdrRow);
   let lc=0;const scan=r=>{const v=ws.getRow(r).values||[];for(let c=v.length-1;c>lc;c--)if(v[c]!=null&&v[c]!==''){lc=c;break}};
   for(let r=1;r<=Math.min(SEQ.lastRow,SEQ.hdrRow+400);r++)scan(r);SEQ.lastCol=Math.min(Math.max(lc,...Object.keys(SEQ.colKey).map(Number),1),120);
-  const hidden=ws.rowCount-SEQ.lastRow;$('seqProg').textContent=hidden>0?`未使用の書式行 ${hidden.toLocaleString()} 行は表示していません`:'';
+  const hidden=ws.rowCount-SEQ.lastRow;$('seqProg').textContent=(hidden>0?`未使用の書式行 ${hidden.toLocaleString()} 行は表示していません。`:'')+(SEQ.note||'');
   renderSeqHead();$('seqBox').scrollTop=0;renderSeqBody();renderCand();renderHist()}
 function renderSeqHead(){const ws=SEQ.ws,nc=SEQ.lastCol,hr=SEQ.hdrRow||1;let h='';
   const colw=[];for(let c=1;c<=nc;c++){const w=ws.getColumn(c).width;colw.push(Math.round(Math.min(260,Math.max(44,(w||9)*7.2))))}
@@ -897,12 +1004,12 @@ function updSeqBtns(){const n=$('candTbl').querySelectorAll('input[data-c]:check
 function shiftRows(pos,n){const m=new Map();for(const[r,v]of SEQ.ins)m.set(r>=pos?r+n:r,v);SEQ.ins=m;for(const[id,r]of SEQ.used)if(r>=pos)SEQ.used.set(id,r+n);if(SEQ.sel&&SEQ.sel>=pos)SEQ.sel+=n;SEQ.hist.forEach(h=>{if(h.pos>=pos)h.pos+=n})}
 function insertAt(pos,ids){const ws=SEQ.ws;if(!ws)return;const step=+$('seqStep').value||5;const nc=Math.max(ws.columnCount,SEQ.lastCol);const list=ids.map(id=>CANDS.find(c=>c.id===id)).filter(Boolean);if(!list.length)return;
   pos=Math.max(pos,SEQ.hdrRow+1);shiftRows(pos,list.length);
-  list.forEach((c,i)=>{const f=seqFields(c,step);const arr=new Array(nc).fill(null);const filled=new Set();
+  const vals=[];list.forEach((c,i)=>{const f=seqFields(c,step);const arr=new Array(nc).fill(null);const filled=new Set();
     for(const col in SEQ.colKey){const k=SEQ.colKey[col];if(!(k in f)||f[k]===''||f[k]==null)continue;let v=f[k];if(k==='date'&&/^\d{4}-\d\d-\d\d$/.test(v)){const[y,m,d]=v.split('-').map(Number);v=new Date(Date.UTC(y,m-1,d))}arr[col-1]=v;filled.add(+col)}
-    ws.insertRow(pos+i,arr,pos+i>SEQ.hdrRow+1?'i':'o');SEQ.ins.set(pos+i,filled);SEQ.used.set(c.id,pos+i)});
+    vals.push(arr.slice());ws.insertRow(pos+i,arr,pos+i>SEQ.hdrRow+1?'i':'o');SEQ.ins.set(pos+i,filled);SEQ.used.set(c.id,pos+i)});
   const n=list.length;SEQ.lastRow=Math.max(SEQ.lastRow+n,pos+n-1);
   const now=new Date();SEQ.hist.push({time:`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,pos,n,items:list.map(c=>`${md(c.date)} ${c.carrier} s${c.slot} ${c.recipe.split('\\').pop()}(${c.wfs}枚)`)});
-  SEQ.undo.push({pos,n,ids:list.map(c=>c.id)});renderSeqBody();renderCand();renderHist();scrollToRow(pos);toast(`${n} 行を ${pos} 行目${n>1?`〜${pos+n-1} 行目`:''}に挿入しました(黄色の行)`)}
+  SEQ.undo.push({pos,n,ids:list.map(c=>c.id),rows:vals});renderSeqBody();renderCand();renderHist();scrollToRow(pos);toast(`${n} 行を ${pos} 行目${n>1?`〜${pos+n-1} 行目`:''}に挿入しました(黄色の行)`)}
 function undoSeq(){const u=SEQ.undo.pop();if(!u)return;SEQ.ws.spliceRows(u.pos,u.n);
   const m=new Map();for(const[r,v]of SEQ.ins){if(r>=u.pos&&r<u.pos+u.n)continue;m.set(r>=u.pos+u.n?r-u.n:r,v)}SEQ.ins=m;u.ids.forEach(id=>SEQ.used.delete(id));
   for(const[id,r]of SEQ.used)if(r>=u.pos+u.n)SEQ.used.set(id,r-u.n);if(SEQ.sel&&SEQ.sel>=u.pos+u.n)SEQ.sel-=u.n;SEQ.hist.pop();SEQ.hist.forEach(h=>{if(h.pos>=u.pos+u.n)h.pos-=u.n});
@@ -918,18 +1025,114 @@ function sampleSeqWb(){const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet(
    ['2026-10-22','','','','','','','','','','(ここから手入力待ち)']].forEach(r=>{const[y,m,d]=r[0].split('-').map(Number);r[0]=new Date(Date.UTC(y,m-1,d));ws.addRow(r)});
   [1,2].forEach(i=>{const r=ws.getRow(i);r.font={bold:true,color:{argb:'FFFFFFFF'}};r.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1F3D8C'}};r.alignment={wrapText:true,horizontal:'center'}});
   for(let r=3;r<=5;r++)for(let c=13;c<=30;c++)ws.getRow(r).getCell(c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFDDEBF7'}};
-  ws.getColumn(1).numFmt='yyyy-mm-dd';ws.getColumn(1).width=12;ws.getColumn(8).width=22;ws.getColumn(9).width=18;return wb}
+  ws.getColumn(1).numFmt='yyyy-mm-dd';ws.getColumn(1).width=12;ws.getColumn(8).width=22;ws.getColumn(9).width=18;
+  const m=wb.addWorksheet('条件メモ');m.addRow(['項目','値']);m.addRow(['基準 Step',5]);m.addRow(['Slurry 目標',190]);m.addRow(['合計',{formula:'SUM(B2:B3)'}]);return wb}
+
+// ===================== XLSX PATCH(原本の XML を直接書き換える。対象シート以外のファイルはそのまま) =====================
+const XNS='http://schemas.openxmlformats.org/spreadsheetml/2006/main',RNS='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+const colNum=s=>{let n=0;for(const ch of s)n=n*26+ch.charCodeAt(0)-64;return n};
+const colStr=n=>{let s='';while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=(n-m-1)/26}return s};
+const REFRX=/(?<![\w.$\u0080-￿])((?:'((?:[^']|'')+)'|([A-Za-z_\u0080-￿][\w.\u0080-￿]*))!)?(\$?[A-Z]{1,3}\$?\d+(?::\$?[A-Z]{1,3}\$?\d+)?|\$?\d+:\$?\d+)(?![\w(!\u0080-￿])/g;
+const refRows=(ref,pos,n)=>ref.replace(/(\$?[A-Z]{0,3}\$?)(\d+)/g,(m,a,r)=>a+(+r>=pos?+r+n:r));
+// 数式の参照を行挿入に合わせてずらす(文字列リテラルの中は触らない)。self=シート名なしの参照をこのシートとみなすか
+function shiftFormula(f,pos,n,sheet,self){return f.split(/("(?:[^"]|"")*")/).map((part,k)=>k%2?part:part.replace(REFRX,(m,pre,q,u,ref)=>{
+  const nm=q!=null?q.replace(/''/g,"'"):u;if(pre?nm!==sheet:!self)return m;return(pre||'')+refRows(ref,pos,n)})).join('')}
+// 共有数式の子セル用に、親の数式を相対参照だけずらす
+function moveFormula(f,dr,dc){return f.split(/("(?:[^"]|"")*")/).map((part,k)=>k%2?part:part.replace(REFRX,(m,pre,q,u,ref)=>(pre||'')+ref.replace(/(\$?)([A-Z]{1,3})?(\$?)(\d+)/g,(x,d1,c,d2,r)=>{
+  const rowAbs=c?d2==='$':d1==='$';const cs=c?d1+(d1==='$'?c:colStr(Math.max(1,colNum(c)+dc)))+d2:d1;return cs+(rowAbs?r:Math.max(1,+r+dr))}))).join('')}
+const xdoc=t=>{const d=new DOMParser().parseFromString(t,'application/xml');if(d.getElementsByTagName('parsererror').length)throw Error('XML を読めません');return d};
+const xstr=d=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'+new XMLSerializer().serializeToString(d).replace(/^<\?xml[^>]*\?>\s*/,'');
+const kids=(el,name)=>[...el.childNodes].filter(c=>c.nodeType===1&&c.localName===name);
+const relTarget=(base,t)=>{if(t.startsWith('/'))return t.slice(1);const p=base.split('/');p.pop();for(const s of t.split('/')){if(s==='..')p.pop();else if(s!=='.')p.push(s)}return p.join('/')};
+const relsOf=path=>{const p=path.split('/');const f=p.pop();return[...p,'_rels',f+'.rels'].join('/')};
+// 画面表示用のコピー(ExcelJS が読めないコメント・VML を外す)
+async function viewCopy(buf){const zip=await JSZip.loadAsync(buf);
+  for(const f of Object.keys(zip.files)){if(/^xl\/worksheets\/_rels\/.+\.rels$/.test(f)){const d=xdoc(await zip.file(f).async('string'));
+      for(const r of[...d.getElementsByTagNameNS('*','Relationship')])if(/\/(comments|vmlDrawing)$/.test(r.getAttribute('Type')||''))r.parentNode.removeChild(r);zip.file(f,xstr(d))}
+    else if(/^xl\/worksheets\/[^/]+\.xml$/.test(f)){const t=await zip.file(f).async('string');zip.file(f,t.replace(/<(\w+:)?legacyDrawing\b[^>]*\/>/g,''))}}
+  return zip.generateAsync({type:'arraybuffer'})}
+async function patchXlsx(orig,sheetName,ops,hdrRow){
+  const zip=await JSZip.loadAsync(orig);const rd=async p=>{const f=zip.file(p);return f?f.async('string'):null};
+  const wb=xdoc(await rd('xl/workbook.xml')),wrels=xdoc(await rd('xl/_rels/workbook.xml.rels'));
+  const sh=[...wb.getElementsByTagNameNS(XNS,'sheet')].find(s=>s.getAttribute('name')===sheetName);if(!sh)throw Error('シートが見つかりません');
+  const rid=sh.getAttributeNS(RNS,'id')||sh.getAttribute('r:id');const rel=[...wrels.getElementsByTagNameNS('*','Relationship')].find(r=>r.getAttribute('Id')===rid);
+  const path=relTarget('xl/workbook.xml',rel.getAttribute('Target'));const ws=xdoc(await rd(path));
+  const pf=ws.documentElement.prefix,mk=n=>ws.createElementNS(XNS,pf?pf+':'+n:n);const sd=ws.getElementsByTagNameNS(XNS,'sheetData')[0];
+  // 日付の書式(styles.xml)
+  const st=await rd('xl/styles.xml');const dateXf=new Set();
+  if(st){const sx=xdoc(st);const fmt={};for(const f of sx.getElementsByTagNameNS(XNS,'numFmt'))fmt[f.getAttribute('numFmtId')]=f.getAttribute('formatCode')||'';
+    const cx=sx.getElementsByTagNameNS(XNS,'cellXfs')[0];if(cx)kids(cx,'xf').forEach((x,i)=>{const id=+x.getAttribute('numFmtId')||0;
+      if((id>=14&&id<=22)||(id>=45&&id<=47)||(fmt[id]&&/[ymd]/i.test(fmt[id].replace(/"[^"]*"|\[[^\]]*\]|\\./g,''))))dateXf.add(String(i))})}
+  // 行・セル番号を明示し、共有数式を通常の数式に展開
+  let rn=0;const rows=kids(sd,'row');for(const r of rows){rn=+r.getAttribute('r')||rn+1;r.setAttribute('r',rn);let cn=0;
+    for(const c of kids(r,'c')){const a=c.getAttribute('r');cn=a?colNum(a.replace(/\d+/g,'')):cn+1;c.setAttribute('r',colStr(cn)+rn)}}
+  const fs=[...ws.getElementsByTagNameNS(XNS,'f')];const master={};
+  for(const f of fs)if(f.getAttribute('t')==='shared'&&f.textContent){const a=f.parentNode.getAttribute('r');master[f.getAttribute('si')]={r:+a.replace(/\D+/g,''),c:colNum(a.replace(/\d+/g,'')),t:f.textContent}}
+  for(const f of fs){if(f.getAttribute('t')!=='shared')continue;const m=master[f.getAttribute('si')];if(!m)continue;const a=f.parentNode.getAttribute('r');
+    if(!f.textContent)f.textContent=moveFormula(m.t,+a.replace(/\D+/g,'')-m.r,colNum(a.replace(/\d+/g,''))-m.c);['t','si','ref'].forEach(x=>f.removeAttribute(x))}
+  const FORM=new Set(['f','formula','formula1','formula2']),REFA=new Set(['mergeCell','hyperlink','dimension','autoFilter','f']);
+  const shiftEl=(root,pos,n,skip)=>{const walk=el=>{for(const c of el.childNodes){if(c.nodeType!==1||c===skip)continue;const ln=c.localName;
+      if(FORM.has(ln)&&c.textContent)c.textContent=shiftFormula(c.textContent,pos,n,sheetName,true);
+      else if(ln==='sqref')c.textContent=refRows(c.textContent,pos,n);
+      if(c.hasAttribute('sqref'))c.setAttribute('sqref',refRows(c.getAttribute('sqref'),pos,n));
+      if(c.hasAttribute('ref')&&REFA.has(ln))c.setAttribute('ref',refRows(c.getAttribute('ref'),pos,n));
+      if(ln==='selection'&&c.hasAttribute('activeCell'))c.setAttribute('activeCell',refRows(c.getAttribute('activeCell'),pos,n));
+      if(ln==='brk'&&c.parentNode.localName==='rowBreaks'&&+c.getAttribute('id')>=pos-1)c.setAttribute('id',+c.getAttribute('id')+n);
+      walk(c)}};walk(root)};
+  // 付属ファイル(テーブル・コメント・図形)
+  const srels=await rd(relsOf(path));const aux=[];
+  if(srels)for(const r of xdoc(srels).getElementsByTagNameNS('*','Relationship')){if(r.getAttribute('TargetMode')==='External')continue;const ty=r.getAttribute('Type')||'';
+    const kind=/\/table$/.test(ty)?'table':/\/comments$/.test(ty)?'comments':/\/vmlDrawing$/.test(ty)?'vml':/\/drawing$/.test(ty)?'drawing':null;if(kind)aux.push({kind,path:relTarget(path,r.getAttribute('Target'))})}
+  for(const a of aux)a.text=await rd(a.path);
+  for(const op of ops){const pos=op.pos,n=op.n;
+    for(const r of kids(sd,'row')){const rr=+r.getAttribute('r');if(rr<pos)continue;r.setAttribute('r',rr+n);for(const c of kids(r,'c'))c.setAttribute('r',c.getAttribute('r').replace(/\d+$/,rr+n))}
+    shiftEl(ws.documentElement,pos,n,null);
+    const all=kids(sd,'row'),byR=new Map(all.map(r=>[+r.getAttribute('r'),r]));
+    const tpl=pos-1>hdrRow&&byR.get(pos-1)||byR.get(pos+n)||null;const tcs=tpl?kids(tpl,'c').map(c=>[colNum(c.getAttribute('r').replace(/\d+/g,'')),c.getAttribute('s')]):[];
+    const before=all.find(r=>+r.getAttribute('r')>=pos+n)||null;
+    op.rows.forEach((vals,i)=>{const r=pos+i,row=mk('row');
+      if(tpl)for(const at of tpl.attributes)if(!['r','spans','hidden','collapsed'].includes(at.name))row.setAttributeNS(at.namespaceURI,at.name,at.value);row.setAttribute('r',r);
+      const style=new Map(tcs);vals.forEach((v,j)=>{if(v!=null&&v!==''&&!style.has(j+1))style.set(j+1,null)});
+      for(const col of[...style.keys()].sort((a,b)=>a-b)){const c=mk('c'),s=style.get(col);c.setAttribute('r',colStr(col)+r);if(s)c.setAttribute('s',s);let v=vals[col-1];
+        if(v instanceof Date){if(s&&dateXf.has(s))v=(v.getTime()-Date.UTC(1899,11,30))/864e5;else v=v.toISOString().slice(0,10).replace(/-/g,'/')}
+        if(typeof v==='number'&&isFinite(v)){const e=mk('v');e.textContent=String(v);c.append(e)}
+        else if(v!=null&&v!==''){c.setAttribute('t','inlineStr');const is=mk('is'),t=mk('t');t.textContent=String(v);if(/^\s|\s$/.test(t.textContent))t.setAttributeNS('http://www.w3.org/XML/1998/namespace','xml:space','preserve');is.append(t);c.append(is)}
+        row.append(c)}
+      sd.insertBefore(row,before)});
+    for(const a of aux){if(!a.text)continue;
+      if(a.kind==='vml')a.text=a.text.replace(/(<x:Row>)(\d+)(<\/x:Row>)/g,(m,p1,v,p2)=>p1+(+v>=pos-1?+v+n:v)+p2).replace(/(<x:Anchor>)([^<]*)(<\/x:Anchor>)/g,(m,p1,v,p2)=>p1+v.split(',').map((x,i)=>(i===2||i===6)&&+x>=pos-1?' '+(+x+n):x).join(',')+p2);
+      else{const d=xdoc(a.text);
+        if(a.kind==='table'){const t=d.documentElement;if(t.hasAttribute('ref'))t.setAttribute('ref',refRows(t.getAttribute('ref'),pos,n));for(const e of d.getElementsByTagNameNS('*','autoFilter'))e.setAttribute('ref',refRows(e.getAttribute('ref'),pos,n))}
+        if(a.kind==='comments')for(const e of d.getElementsByTagNameNS('*','comment'))e.setAttribute('ref',refRows(e.getAttribute('ref'),pos,n));
+        if(a.kind==='drawing')for(const e of d.getElementsByTagNameNS('*','row'))if(['from','to'].includes(e.parentNode.localName)&&+e.textContent>=pos-1)e.textContent=+e.textContent+n;
+        a.text=xstr(d)}}
+    for(const dn of wb.getElementsByTagNameNS(XNS,'definedName'))dn.textContent=shiftFormula(dn.textContent,pos,n,sheetName,false)}
+  zip.file(path,xstr(ws),{createFolders:false});for(const a of aux)if(a.text)zip.file(a.path,a.text,{createFolders:false});
+  // 計算チェーンを外して、Excel で開いたときに再計算させる
+  for(const r of[...wrels.getElementsByTagNameNS('*','Relationship')])if(/\/calcChain$/.test(r.getAttribute('Type')||'')){zip.remove(relTarget('xl/workbook.xml',r.getAttribute('Target')));r.parentNode.removeChild(r)}
+  zip.remove('xl/calcChain.xml');const ct=await rd('[Content_Types].xml');if(ct){const d=xdoc(ct);for(const o of[...d.getElementsByTagNameNS('*','Override')])if(/calcChain/.test(o.getAttribute('PartName')))o.parentNode.removeChild(o);zip.file('[Content_Types].xml',xstr(d),{createFolders:false})}
+  let cp=wb.getElementsByTagNameNS(XNS,'calcPr')[0];if(!cp){cp=wb.createElementNS(XNS,wb.documentElement.prefix?wb.documentElement.prefix+':calcPr':'calcPr');const after=wb.getElementsByTagNameNS(XNS,'definedNames')[0]||wb.getElementsByTagNameNS(XNS,'sheets')[0];after.parentNode.insertBefore(cp,after.nextSibling)}
+  cp.setAttribute('fullCalcOnLoad','1');zip.file('xl/workbook.xml',xstr(wb),{createFolders:false});zip.file('xl/_rels/workbook.xml.rels',xstr(wrels),{createFolders:false});
+  // 他のシートで、このシートのセルを参照している数式だけ参照先をずらす(Excel で行を挿入したときと同じ)。それ以外は原本のまま
+  let cross=0;for(const r of wrels.getElementsByTagNameNS('*','Relationship')){if(!/\/worksheet$/.test(r.getAttribute('Type')||''))continue;const p=relTarget('xl/workbook.xml',r.getAttribute('Target'));
+    if(p===path)continue;const t=await rd(p);if(!t||!/<(\w+:)?f[ >]/.test(t))continue;const d=xdoc(t);let ch=0;
+    for(const f of d.getElementsByTagNameNS(XNS,'f')){const o=f.textContent;if(!o.includes('!'))continue;let v=o;for(const op of ops)v=shiftFormula(v,op.pos,op.n,sheetName,false);if(v!==o){f.textContent=v;ch++}}
+    if(ch){cross+=ch;zip.file(p,xstr(d),{createFolders:false})}}
+  const ext=/\.xlsm$/i.test(SEQ.name)?'xlsm':'xlsx';
+  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6},mimeType:MIME[ext]});return{blob,cross}}
 
 // ===================== RENDER ALL =====================
 function renderDash(){renderCards();renderChart();renderDev();renderCounters()}
 function refreshAll(){buildKeys();initFilters();renderDash();renderLog();if(SEQ.ws)renderCand()}
 
 // ===================== EVENTS =====================
-['d0','d1','dmy'].forEach(i=>$(i).addEventListener('change',()=>{devCell=null;renderDash()}));
+['d0','d1'].forEach(i=>$(i).addEventListener('change',()=>{devCell=null;renderDash()}));
+$('dmy').addEventListener('change',()=>{devCell=null;fillWafers();renderDash()});
 ['s0','s1'].forEach(i=>$(i).onchange=()=>{renderCards();renderChart()});
 ['ex1','ex2','ex3'].forEach(i=>$(i).onchange=renderCards);
-$('cap').onchange=()=>{fillKind();if($('ymode').value==='man'){$('ymode').value='auto';$('ymanBox').hidden=true}renderChart()};
-['kind','agg'].forEach(i=>$(i).addEventListener('input',renderChart));
+$('it1').onchange=()=>{if($('ymode').value==='man'){$('ymode').value='auto';$('ymanBox').hidden=true}renderChart()};
+['it2','it3','it4','it5','kind','agg','w0','w1','dstep'].forEach(i=>$(i).addEventListener('change',renderChart));
+$('cday').onchange=()=>{fillWafers();renderChart()};$('heatH').onchange=()=>renderHeat();
 $('yh').addEventListener('input',()=>{$('yhn').value=$('yh').value;renderChart()});
 $('yhn').addEventListener('change',()=>{let v=Math.round(+$('yhn').value||300);v=Math.min(800,Math.max(160,v));$('yhn').value=v;$('yh').value=v;renderChart()});
 $('ymode').onchange=()=>{$('ymanBox').hidden=$('ymode').value!=='man';renderChart()};['ymin','ymax'].forEach(i=>$(i).addEventListener('change',()=>{$('ymode').value='man';$('ymanBox').hidden=false;renderChart()}));
@@ -938,7 +1141,7 @@ $('devTh').addEventListener('change',()=>{$('devTh').value=Math.round(devThresho
 $('devThR').addEventListener('input',()=>{$('devTh').value=$('devThR').value;renderDev()});
 ['c0','c1'].forEach(i=>$(i).onchange=renderCounters);['barItem','barMode'].forEach(i=>$(i).onchange=()=>renderBars());
 $('expAll').onclick=()=>exportTables(TABLES.filter(t=>tablesOn.has(t)));$('expCnt').onclick=exportCounters;$('expChart').onclick=exportChart;
-$('snapCards').onclick=()=>snap($('cardsSec'),'CMP_テーブル別コンディション');$('snapChart').onclick=()=>snap($('chartSec'),'CMP_項目別日次推移');$('snapBars').onclick=()=>snap($('barsBox'),'CMP_テーブル別比較');
+$('snapCards').onclick=()=>snap($('cardsSec'),'CMP_テーブル別コンディション');$('snapChart').onclick=()=>snap($('chartSec'),$('cday').value?`CMP_項目別推移_${$('cday').value}`:'CMP_項目別日次推移');$('snapBars').onclick=()=>snap($('barsBox'),'CMP_テーブル別比較');
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-pressed',x===b));
   for(const v of['dash','seq','log'])$('v-'+v).hidden=b.dataset.v!==v;if(b.dataset.v==='seq'&&SEQ.ws){renderSeqHead();renderSeqBody();renderCand()}if(b.dataset.v==='dash')renderChart()});
 // ProcessLog取込
@@ -948,7 +1151,12 @@ $('filesIn').onchange=e=>importList([...e.target.files].map(f=>({file:f,path:f.n
 function dropZone(el,onDrop){el.addEventListener('dragover',e=>{if([...e.dataTransfer.types].includes('Files')){e.preventDefault();el.classList.add('over')}});el.addEventListener('dragleave',e=>{if(!el.contains(e.relatedTarget))el.classList.remove('over')});
   el.addEventListener('drop',e=>{if(![...e.dataTransfer.types].includes('Files'))return;e.preventDefault();el.classList.remove('over');onDrop(e)})}
 dropZone($('logDrop'),async e=>{$('prog').textContent='フォルダを読み込み中…';const list=await walkEntries(e.dataTransfer.items);importList(list.length?list:[...e.dataTransfer.files].map(f=>({file:f,path:f.name})))});
-$('saveTotal').onclick=saveTotal;$('loadSample').onclick=()=>{DB=makeSample();tablesOn=new Set(TABLES);chartOn=new Set(TABLES);refreshAll();toast('サンプルデータに戻しました')};
+$('saveTotal').onclick=saveTotal;$('loadSample').onclick=()=>{DB=makeSample();tablesOn=new Set(TABLES);chartOn=new Set(TABLES);devCell=null;refreshAll();toast('サンプルデータに戻しました')};
+// 取込データのリセット(2 回押しで確定。元のファイルには影響しない)
+$('resetData').onclick=()=>{const b=$('resetData'),lab='取込データをリセット';clearTimeout(b._t);
+  if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='もう一度押すとリセット';b._t=setTimeout(()=>{b.classList.remove('armed');b.textContent=lab},4000);return}
+  b.classList.remove('armed');b.textContent=lab;DB={wafers:[],jobs:[],summary:[],folders:{},errors:[],source:'empty'};tablesOn=new Set(TABLES);chartOn=new Set(TABLES);devCell=null;
+  $('pending').innerHTML='';$('prog').textContent='';refreshAll();toast('取込データをリセットしました。PC のフォルダから取り込んでください')};
 // Sequence
 $('seqOpenBtn').onclick=()=>$('seqFile').click();
 $('seqFile').onchange=async e=>{const f=e.target.files[0];if(f)await openSeq(await f.arrayBuffer(),f.name);e.target.value=''};
@@ -964,11 +1172,16 @@ $('seqBody').addEventListener('dragover',e=>{if(![...e.dataTransfer.types].inclu
 $('seqBody').addEventListener('dragleave',e=>{if(!$('seqBody').contains(e.relatedTarget))clearDrop()});
 $('seqBody').addEventListener('drop',e=>{const d=e.dataTransfer.getData('text/x-cmp');if(!d)return;e.preventDefault();e.stopPropagation();const tr=e.target.closest('tr[data-r]');if(!tr)return;
   const above=tr.classList.contains('da');clearDrop();const r=+tr.dataset.r;insertAt(above?r:r+1,JSON.parse(d))});
-$('seqSave').onclick=async()=>{if(!SEQ.wb)return;const base=SEQ.name.replace(/\.(xlsx|xlsm)$/i,'').replace(/(サンプル)$/,'');await saveWb(SEQ.wb,`${base}_挿入済_${stamp()}.xlsx`)};
+// 保存:原本ファイルの対象シートだけに行を挿入して別名保存(他のシート・書式・数式は原本のまま)。失敗したときだけ ExcelJS で書き出す
+$('seqSave').onclick=async()=>{if(!SEQ.wb)return;const base=SEQ.name.replace(/\.(xlsx|xlsm)$/i,'').replace(/(サンプル)$/,'');const ext=/\.xlsm$/i.test(SEQ.name)?'xlsm':'xlsx';
+  if(SEQ.orig&&window.JSZip){try{$('seqProg').textContent='保存用ファイルを作成中…';const{blob,cross}=await patchXlsx(SEQ.orig,SEQ.ws.name,SEQ.undo,SEQ.hdrRow);
+      $('seqProg').textContent=`「${SEQ.ws.name}」に ${SEQ.undo.reduce((a,u)=>a+u.n,0)} 行を挿入して保存。他のシートは原本のまま`+(cross?`(他のシートでこのシートを参照している数式 ${cross} 件は、参照先の行に合わせて更新)`:'');
+      await saveBlob(blob,`${base}_挿入済_${stamp()}.${ext}`);return}catch(e){console.warn(e);toast('原本を保ったままの保存に失敗したため、通常の方法で保存します: '+e.message)}}
+  await saveWb(SEQ.wb,`${base}_挿入済_${stamp()}.xlsx`)};
 matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{let s=null;try{s=localStorage.getItem(THEME_KEY)}catch(e){}if(!s)setTheme(currentTheme(),false)});
 
 // ===================== BOOT =====================
 setTheme(currentTheme(),false);
 DB=makeSample();refreshAll();
-if(window.ExcelJS){SEQ.wb=sampleSeqWb();SEQ.name='Sequence_サンプル.xlsx';$('seqSheet').innerHTML='<option>シーケンス表</option>';$('seqName').textContent=SEQ.name+'(サンプル)';SEQ.ws=SEQ.wb.getWorksheet('シーケンス表');selectSheet()}
+if(window.ExcelJS)sampleSeqWb().xlsx.writeBuffer().then(async b=>{await openSeq(b,'Sequence_サンプル.xlsx');$('seqName').textContent='Sequence_サンプル.xlsx(サンプル)'});
 </script>
