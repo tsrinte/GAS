@@ -171,6 +171,17 @@ tr.dev td{background:var(--crit-soft)}
 .dz small{color:var(--mute);font-size:12px}
 .dz.over{background:var(--sel);outline:none}
 .pend{font-size:12px;color:var(--warn);font-weight:700}
+.imp{margin-top:14px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.imp[data-st="ok"]{border-left-color:var(--good)} .imp[data-st="warn"]{border-left-color:var(--warn)} .imp[data-st="err"]{border-left-color:var(--crit)}
+.imp[data-st="ok"] #impTitle{color:var(--good)} .imp[data-st="warn"] #impTitle{color:var(--warn)} .imp[data-st="err"] #impTitle{color:var(--crit)}
+.pbar{height:10px;border-radius:99px;background:var(--heat0);overflow:hidden}
+.pbar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.imp[data-st="ok"] .pbar i{background:var(--good)} .imp[data-st="warn"] .pbar i{background:var(--warn)} .imp[data-st="err"] .pbar i{background:var(--crit)}
+.imp.ind .pbar i{animation:ind 1.1s ease-in-out infinite alternate}
+@keyframes ind{from{margin-left:0}to{margin-left:70%}}
+.ist{font-size:12px;border:1px solid var(--line);border-radius:99px;padding:2px 10px;color:var(--mute)}
+.ist b{font-family:var(--mono);color:var(--ink);font-weight:500}
+.ist.warn{border-color:var(--warn);color:var(--warn)} .ist.crit{border-color:var(--crit);color:var(--crit)}
 details summary{cursor:pointer;font-size:12px;color:var(--accent);font-weight:700}
 .prog{font-size:12px;color:var(--accent);font-weight:700}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -339,6 +350,13 @@ details summary{cursor:pointer;font-size:12px;color:var(--accent);font-weight:70
      <div class="row"><button class="btn" id="saveTotal">Process_Total を保存</button></div>
      <div id="pending"></div>
    </div>
+  </div>
+  <div class="imp" id="imp" hidden aria-live="polite">
+    <div class="row" style="justify-content:space-between"><b id="impTitle"></b><span class="row"><span class="note" style="margin:0" id="impTime"></span><button class="btn sec" id="impCancel" hidden>中止</button><button class="btn" id="impGo" hidden>Dashboard を見る</button></span></div>
+    <div class="pbar"><i id="impBar"></i></div>
+    <div class="row" id="impStat" style="gap:6px"></div>
+    <div class="note" id="impCur" style="margin:0;font-family:var(--mono);font-size:11px;overflow-wrap:anywhere"></div>
+    <div id="impIssues"></div>
   </div>
  </section>
  <section class="p">
@@ -900,29 +918,81 @@ async function loadTotal(buf,name){const wb=new ExcelJS.Workbook();await wb.xlsx
 // ===================== IMPORT =====================
 function mergeWafers(ws){if(DB.source!=='local')DB={wafers:[],jobs:[],summary:[],folders:{},errors:[],source:'local'};
   const idx=new Map(DB.wafers.map((w,i)=>[w.key,i]));for(const w of ws){if(idx.has(w.key))DB.wafers[idx.get(w.key)]=w;else{idx.set(w.key,DB.wafers.length);DB.wafers.push(w)}}}
-async function walkEntries(items){const out=[];const walk=async(e,path)=>{if(e.isFile){const f=await new Promise((res,rej)=>e.file(res,rej));out.push({file:f,path:path+f.name})}
-  else if(e.isDirectory){const rd=e.createReader();let batch;do{batch=await new Promise((res,rej)=>rd.readEntries(res,rej));for(const c of batch)await walk(c,path+e.name+'/')}while(batch.length)}};
-  const ents=[...items].map(it=>it.webkitGetAsEntry&&it.webkitGetAsEntry()).filter(Boolean);for(const e of ents)await walk(e,'');return out}
-async function importList(list){if(!list.length)return;const dir=p=>p.includes('/')?p.slice(0,p.lastIndexOf('/')):'(直接選択)';
-  const kind=n=>/ProcessLog_Job\.(csv|cvs)$/i.test(n)?'job':/ProcessLog_Summary\.(csv|cvs)$/i.test(n)?'sum':/^ProcessLog_.+\.(csv|cvs)$/i.test(n)?'det':/\.xlsx$/i.test(n)?'total':null;
-  const items=list.map(x=>({...x,kind:kind(x.file.name)})).filter(x=>x.kind);const skipped=list.length-items.length;
-  const errors=[];const jobsBy={},sumBy={};const newW=[];let done=0;const tot=items.length;
-  for(const it of items.filter(x=>x.kind==='total')){try{const n=await loadTotal(await it.file.arrayBuffer(),it.file.name);if(n)toast(`${it.file.name} から ${n} 枚を復元`);else errors.push([it.path,'Process_Total 形式(Wafers / Raw シート)ではありません'])}catch(e){errors.push([it.path,'Process_Total を読めません: '+e.message])}done++}
-  for(const it of items.filter(x=>x.kind==='job'||x.kind==='sum')){try{const t=decodeBuf(await it.file.arrayBuffer());const d=dir(it.path);
-      if(it.kind==='job')(jobsBy[d]=jobsBy[d]||[]).push(...parseJob(t,d));else(sumBy[d]=sumBy[d]||[]).push(...parseSummary(t,d))}catch(e){errors.push([it.path,e.message])}done++}
+// 取込の進み具合(取込元の下に表示)
+let IMP=null,impLast=0;
+const fmtSec=t=>t<60?`${t.toFixed(1)} 秒`:`${Math.floor(t/60)} 分 ${Math.round(t%60)} 秒`;
+function impIssue(lv,path,msg){IMP.issues.push({lv,path,msg});IMP.n[lv]++}
+async function impTick(force){const now=performance.now();if(!force&&now-impLast<100)return;impLast=now;impUI();await new Promise(r=>setTimeout(r))}
+function impUI(){const s=IMP;if(!s)return;$('imp').hidden=false;const pct=s.total?Math.min(100,Math.floor(s.done/s.total*100)):0;const el=(performance.now()-s.t0)/1000;
+  const rest=s.running&&s.phase==='read'&&s.done>3&&s.total>s.done?el/s.done*(s.total-s.done):null;
+  $('imp').dataset.st=s.running?'run':s.n.err?'err':s.n.warn?'warn':'ok';$('imp').classList.toggle('ind',s.running&&s.phase==='list');
+  $('impTitle').textContent=s.running?(s.phase==='list'?`ファイル一覧を作成中… ${s.total.toLocaleString()} 件見つかりました`:s.phase==='link'?'Job.csv / Summary と照合して Dashboard に反映中…':`読込中 ${s.done.toLocaleString()} / ${s.total.toLocaleString()} ファイル(${pct}%)`):s.title;
+  $('impBar').style.width=(s.running?(s.phase==='read'?pct:s.phase==='link'?100:30):100)+'%';
+  $('impTime').textContent=`経過 ${fmtSec(el)}${rest!=null?` ・ 残り 約 ${fmtSec(rest)}`:''}`;
+  const c=(lab,v,cls='')=>`<span class="ist ${cls}">${lab} <b>${v.toLocaleString()}</b></span>`;
+  $('impStat').innerHTML=c('詳細 CSV',s.n.det)+c('Job.csv',s.n.job)+c('Summary.csv',s.n.sum)+(s.n.total?c('Process_Total',s.n.total):'')+c('対象外',s.n.skip)+c('警告',s.n.warn,s.n.warn?'warn':'')+c('エラー',s.n.err,s.n.err?'crit':'');
+  $('impCur').textContent=s.running&&s.cur?s.cur:'';$('impCancel').hidden=!s.running;
+  $('prog').textContent=s.running?(s.phase==='read'?`取込中 ${pct}%`:'取込中…'):s.short;
+  if(s.running)return;
+  const iss=s.issues.filter(i=>i.lv!=='skip'),sk=s.issues.filter(i=>i.lv==='skip');const LV={err:'<span class="pill crit">エラー</span>',warn:'<span class="pill warn">警告</span>'};
+  $('impIssues').innerHTML=(iss.length?`<div class="tw" style="max-height:280px"><table><thead><tr><th class="l">種類</th><th class="l">ファイル / フォルダ</th><th class="l">内容</th></tr></thead><tbody>${
+      iss.sort((a,b)=>a.lv===b.lv?0:a.lv==='err'?-1:1).slice(0,500).map(i=>`<tr><td class="l">${LV[i.lv]}</td><td class="l" style="white-space:normal;overflow-wrap:anywhere">${esc(i.path)}</td><td class="l" style="white-space:normal">${esc(i.msg)}</td></tr>`).join('')}</tbody></table></div>`:'')
+    +(sk.length?`<details style="margin-top:6px"><summary>対象外として読み飛ばしたファイル ${sk.length} 件</summary><div class="tw" style="max-height:200px"><table><tbody>${sk.slice(0,500).map(i=>`<tr><td class="l" style="white-space:normal;overflow-wrap:anywhere">${esc(i.path)}</td><td class="l">${esc(i.msg)}</td></tr>`).join('')}</tbody></table></div></details>`:'');
+  $('impGo').hidden=!(s.n.det||s.n.total)}
+async function walkEntries(ents){const out=[];const walk=async(e,path)=>{if(IMP.cancel)return;
+    if(e.isFile){try{const f=await new Promise((res,rej)=>e.file(res,rej));out.push({file:f,path:path+f.name});IMP.total=out.length;await impTick()}catch(err){impIssue('err',path+e.name,'ファイルを開けません: '+(err&&err.message||err))}}
+    else if(e.isDirectory){const rd=e.createReader();let batch;do{batch=await new Promise((res,rej)=>rd.readEntries(res,rej));for(const c of batch)await walk(c,path+e.name+'/')}while(batch.length)}};
+  for(const e of ents)await walk(e,'');return out}
+// getList: ファイル一覧を返す関数(フォルダのドロップは中を順にたどる)
+async function runImport(getList){if(IMP&&IMP.running)return toast('取込中です。終わるまでお待ちください');
+  IMP={t0:performance.now(),phase:'list',total:0,done:0,n:{det:0,job:0,sum:0,total:0,skip:0,warn:0,err:0},issues:[],cur:'',cancel:false,running:true,title:'',short:''};const s=IMP;
+  $('impIssues').innerHTML='';$('impGo').hidden=true;impUI();await new Promise(r=>setTimeout(r));
+  try{const list=await getList();s.phase='read';s.total=list.length;impUI();
+    if(!list.length)impIssue('err','(選択したもの)','ファイルが 1 つも見つかりませんでした。フォルダの中身を確認してください');else await importList(list)}
+  catch(e){console.error(e);impIssue('err','(取込全体)','予期しないエラーで止まりました: '+(e&&e.message||e))}
+  s.running=false;const ok=s.n.det+s.n.total;
+  s.title=s.cancel?`中止しました(${s.done.toLocaleString()} / ${s.total.toLocaleString()} ファイルまで反映)`:ok?`取込完了:${s.n.det.toLocaleString()} 件の詳細 CSV${s.n.total?` と Process_Total ${s.n.total} 件`:''}を読み込み、Dashboard に反映しました`+(s.n.err?`(エラー ${s.n.err} 件)`:s.n.warn?`(警告 ${s.n.warn} 件)`:''):s.n.job||s.n.sum?`Job.csv / Summary だけを読み込みました(詳細 CSV がないため Dashboard の数値は変わりません)`:`取り込めたデータはありません${s.n.err?`(エラー ${s.n.err} 件)`:''}。下の内容を確認してください`;
+  s.short=s.cancel?'中止':ok?`取込完了 ${s.n.det} 件`+(s.n.err?` ・ エラー ${s.n.err}`:''):'取込データなし';
+  DB.errors.push(...s.issues.filter(i=>i.lv==='err').map(i=>[i.path,i.msg]));renderLog();impUI();toast(s.title)}
+const ftype=n=>((/\.([^.\/]+)$/.exec(n)||[])[1]||'').toLowerCase();
+async function importList(list){const s=IMP;const dir=p=>p.includes('/')?p.slice(0,p.lastIndexOf('/')):'(直接選択)';
+  const jobsBy={},sumBy={},newW=[];
+  const xl=list.filter(x=>ftype(x.file.name)==='xlsx'),csv=list.filter(x=>['csv','cvs'].includes(ftype(x.file.name))),other=list.filter(x=>!xl.includes(x)&&!csv.includes(x));
+  for(const it of other){impIssue('skip',it.path,ftype(it.file.name)?`CSV ではありません(.${ftype(it.file.name)})`:'拡張子がありません');s.done++}
+  for(const it of xl){if(s.cancel)break;s.cur=it.path;await impTick(true);
+    try{const n=await loadTotal(await it.file.arrayBuffer(),it.file.name);if(n)s.n.total++;else impIssue('skip',it.path,'Process_Total 形式(Wafers / Raw シート)ではない .xlsx')}
+    catch(e){impIssue('err',it.path,'Process_Total を読めません: '+(e&&e.message||e))}s.done++}
+  for(const it of csv){if(s.cancel)break;s.cur=it.path;await impTick();
+    try{if(!it.file.size){impIssue('err',it.path,'ファイルが空です(0 バイト)');s.done++;continue}
+      const t=decodeBuf(await it.file.arrayBuffer());const first=(t.replace(/^﻿/,'').split(/\r?\n/,1)[0]||'');const d=dir(it.path);
+      // 中身で種類を判定(ファイル名に依存しない)
+      if(/(^|,)"?SystemWaferList"?(,|$)/.test(first)){const js=parseJob(t,d);(jobsBy[d]=jobsBy[d]||[]).push(...js);s.n.job++;if(!js.length)impIssue('warn',it.path,'Job.csv にデータ行がありません')}
+      else if(/(^|,)"?SystemWaferID"?(,|$)/.test(first)){const ss=parseSummary(t,d);(sumBy[d]=sumBy[d]||[]).push(...ss);s.n.sum++;if(!ss.length)impIssue('warn',it.path,'Summary.csv にデータ行がありません')}
+      else if(/(^|\n)[^,\n]*,SystemOrder,/.test(t.slice(0,20000))){const w=parseDetail(t,it.path);w.folder=d;
+        if(!Object.keys(w.steps).length)impIssue('err',it.path,'Step データ(PolisherX_G3_Step セクション)が見つかりません');
+        else{s.n.det++;newW.push(w);if(!w.date)impIssue('warn',it.path,'開始時刻(WaferInfo の 開始時刻)が読めないため、日付別の集計に入りません');
+          if(!TABLES.includes(w.table))impIssue('warn',it.path,`テーブルを判定できません(プロセスルート「${w.route||'空欄'}」)`)}}
+      else impIssue('skip',it.path,`ProcessLog の形式ではありません(1 行目: ${first.slice(0,60)}${first.length>60?'…':''})`)}
+    catch(e){impIssue('err',it.path,'読込エラー: '+(e&&e.message||e))}s.done++}
+  if(s.cancel)impIssue('warn','(中止)',`${(s.total-s.done).toLocaleString()} ファイルは読み込んでいません`);
+  s.phase='link';s.cur='';await impTick(true);
   const jdirs=Object.keys({...jobsBy,...sumBy}).sort((a,b)=>b.length-a.length);
-  for(const it of items.filter(x=>x.kind==='det')){if(done%20===0){$('prog').textContent=`読込中 ${done}/${tot}`;await new Promise(r=>setTimeout(r))}
-    try{const t=decodeBuf(await it.file.arrayBuffer());const w=parseDetail(t,it.path);const d=dir(it.path);w.folder=jdirs.find(j=>d===j||d.startsWith(j+'/'))||d;
-      if(!Object.keys(w.steps).length)errors.push([it.path,'Step データが見つかりません(形式を確認)']);
-      else{if(!w.date)errors.push([it.path,'開始時刻が読めません']);newW.push(w)}}catch(e){errors.push([it.path,e.message])}done++}
+  for(const w of newW)w.folder=jdirs.find(j=>w.folder===j||w.folder.startsWith(j+'/'))||w.folder;
   const allJobs=Object.values(jobsBy).flat();
   for(const w of newW){const js=jobsBy[w.folder]||allJobs;w.job=js.find(j=>j.list.includes(w.id))||null;
-    if(!w.job){const s=(sumBy[w.folder]||[]).find(s=>s.wid===w.id);if(s)w.job=js.find(j=>j.sysLot===s.sysLot)||null}}
+    if(!w.job){const sm=(sumBy[w.folder]||[]).find(x=>x.wid===w.id);if(sm)w.job=js.find(j=>j.sysLot===sm.sysLot)||null}}
+  // 同じウェーハのファイルが複数ある場合(例:_add)
+  const byKey=new Map();for(const w of newW)(byKey.get(w.key)||byKey.set(w.key,[]).get(w.key)).push(w.file);
+  for(const[k,fs]of byKey)if(fs.length>1)impIssue('warn',fs.join(' / '),`同じウェーハ(ID ${k.split('|')[0]})のファイルが ${fs.length} 件あります。後に読んだファイルの内容を使います`);
   if(newW.length||allJobs.length)mergeWafers(newW);DB.jobs.push(...allJobs);DB.summary.push(...Object.values(sumBy).flat());
   const folders=new Set([...Object.keys(jobsBy),...Object.keys(sumBy),...newW.map(w=>w.folder)]);
-  for(const f of folders){const js=jobsBy[f]||[],ss=sumBy[f]||[],ws=newW.filter(w=>w.folder===f);DB.folders[f]={jobs:js.length,jobWafers:js.reduce((a,j)=>a+j.wafers,0),summary:ss.length,details:ws.length,linked:ws.filter(w=>w.job).length}}
-  DB.errors.push(...errors);$('prog').textContent=`取込完了:詳細 CSV ${newW.length} 件${skipped?`(対象外 ${skipped} 件を除外)`:''}${errors.length?` ・ エラー ${errors.length} 件`:''}`;
-  refreshAll();}
+  for(const f of folders){const js=jobsBy[f]||[],ss=sumBy[f]||[],ws=newW.filter(w=>w.folder===f);const uniq=new Set(ws.map(w=>w.key)).size;
+    const v=DB.folders[f]={jobs:js.length,jobWafers:js.reduce((a,j)=>a+j.wafers,0),summary:ss.length,details:uniq,linked:new Set(ws.filter(w=>w.job).map(w=>w.key)).size};
+    if(!js.length&&ws.length)impIssue('warn',f,'このフォルダに ProcessLog_Job.csv がありません(Job との照合なしで集計)');
+    else if(js.length&&v.jobWafers!==v.details)impIssue('warn',f,`Job.csv の Wafers 合計 ${v.jobWafers} 枚と詳細 CSV ${v.details} 枚が一致しません`);
+    if(ss.length&&v.summary!==v.details)impIssue('warn',f,`Summary の行数 ${v.summary} と詳細 CSV ${v.details} 枚が一致しません`);
+    const nl=ws.filter(w=>!w.job);if(js.length&&nl.length)impIssue('warn',f,`Job.csv に載っていないウェーハ ${nl.length} 枚: ID ${nl.slice(0,8).map(w=>w.id).join(', ')}${nl.length>8?' …':''}`)}
+  if(newW.length||allJobs.length||s.n.total)refreshAll();else renderLog()}
 function renderLog(){const fs=Object.entries(DB.folders).sort();
   $('logTbl').innerHTML=fs.map(([f,v])=>{const ok=v.jobWafers===v.details&&v.summary===v.details;const st=ok?'<span class="pill ok">✓ 一致</span>':`<span class="pill warn">⚠ 要確認</span> ${v.jobWafers!==v.details?`Job ${v.jobWafers} ≠ 詳細 ${v.details}`:''} ${v.summary!==v.details?`Summary ${v.summary} ≠ 詳細 ${v.details}`:''}`;
     return `<tr><td class="l">${esc(f)}</td><td>${v.jobs}</td><td>${v.jobWafers}</td><td>${v.summary}</td><td>${v.details}</td><td>${v.linked}</td><td class="l">${st}</td></tr>`}).join('')||'<tr><td class="l" colspan="7">まだ取り込んでいません。</td></tr>';
@@ -1146,11 +1216,15 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.query
   for(const v of['dash','seq','log'])$('v-'+v).hidden=b.dataset.v!==v;if(b.dataset.v==='seq'&&SEQ.ws){renderSeqHead();renderSeqBody();renderCand()}if(b.dataset.v==='dash')renderChart()});
 // ProcessLog取込
 $('logDrop').onclick=()=>$('dirIn').click();$('logDrop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('dirIn').click()}};$('pickFiles').onclick=()=>$('filesIn').click();
-$('dirIn').onchange=e=>importList([...e.target.files].map(f=>({file:f,path:f.webkitRelativePath||f.name})));
-$('filesIn').onchange=e=>importList([...e.target.files].map(f=>({file:f,path:f.name})));
+// 同じフォルダをもう一度選んでも動くように、読み取ったら選択をクリアする
+$('dirIn').onchange=e=>{const l=[...e.target.files].map(f=>({file:f,path:f.webkitRelativePath||f.name}));e.target.value='';if(l.length)runImport(async()=>l);else toast('フォルダの中にファイルがありません')};
+$('filesIn').onchange=e=>{const l=[...e.target.files].map(f=>({file:f,path:f.name}));e.target.value='';if(l.length)runImport(async()=>l)};
+$('impCancel').onclick=()=>{if(IMP)IMP.cancel=true};$('impGo').onclick=()=>document.querySelector('nav button[data-v=dash]').click();
 function dropZone(el,onDrop){el.addEventListener('dragover',e=>{if([...e.dataTransfer.types].includes('Files')){e.preventDefault();el.classList.add('over')}});el.addEventListener('dragleave',e=>{if(!el.contains(e.relatedTarget))el.classList.remove('over')});
   el.addEventListener('drop',e=>{if(![...e.dataTransfer.types].includes('Files'))return;e.preventDefault();el.classList.remove('over');onDrop(e)})}
-dropZone($('logDrop'),async e=>{$('prog').textContent='フォルダを読み込み中…';const list=await walkEntries(e.dataTransfer.items);importList(list.length?list:[...e.dataTransfer.files].map(f=>({file:f,path:f.name})))});
+// ドロップされた項目はイベント中にしか読めないので、先に取り出しておく
+dropZone($('logDrop'),e=>{const ents=[...e.dataTransfer.items].map(it=>it.webkitGetAsEntry&&it.webkitGetAsEntry()).filter(Boolean),files=[...e.dataTransfer.files];
+  runImport(async()=>ents.length?walkEntries(ents):files.map(f=>({file:f,path:f.name})))});
 $('saveTotal').onclick=saveTotal;$('loadSample').onclick=()=>{DB=makeSample();tablesOn=new Set(TABLES);chartOn=new Set(TABLES);devCell=null;refreshAll();toast('サンプルデータに戻しました')};
 // 取込データのリセット(2 回押しで確定。元のファイルには影響しない)
 $('resetData').onclick=()=>{const b=$('resetData'),lab='取込データをリセット';clearTimeout(b._t);
