@@ -67,6 +67,12 @@ BOX에 매일 올라오는 CMP 장치 Job 로그(CSV)를 GAS로 자동 취합하
 - 파일 종류는 파일명이 아니라 내용(1 행째 SystemWaferList → Job, SystemWaferID → Summary, SystemOrder 섹션 → 상세)으로 판정.
 - 오류·경고는 파일별로 표시: 빈 파일, Step 섹션 없음, 개시 시각 없음, 테이블 판정 불가, 같은 웨이퍼 중복 파일(_add 등, 나중 파일 사용), Job Wafers 합계·Summary 행수 불일치, Job 에 없는 웨이퍼, Job.csv 없는 폴더. CSV 가 아닌 파일은 「対象外」 목록.
 
+## 추가 결정 (2026-10-28, 8차 피드백 → 업로드 오류 수정)
+- 원인: HTML 을 파일(file://)로 열면 Chrome/Edge 의 드래그&드롭 폴더 읽기(webkitGetAsEntry)가 「A URI supplied to the API was malformed…」(EncodingError)로 실패. 파일·폴더·Start Log 전체 모두 같은 원인.
+- 대책: 드롭은 ① File System Access 핸들 ② 기존 방식 ③ 파일만, 순서로 자동 재시도. 모두 실패하면 원인 설명과 「フォルダを選択して取り込む」 버튼(클릭 선택은 이 제한 없음). 오류 문구는 원인별(EncodingError / 미다운로드 파일 / 삭제 / 권한).
+- 실제 파일명은 ID 가 괄호 포함: `ProcessLog_KL0-01103.04_C4W04_(4099).csv` → 파서가 괄호 ID 도 인식.
+- 「取込データをリセット」·「サンプルに戻す」는 진행/오류 패널과 에러 목록도 지움(取込中에는 중지 후).
+
 ## BOX 폴더 구조
 Main/Project/Log(이름 가변)/Start Log/일별로그/날짜폴더(1010 등)/
 - `CJ_..._(링크번호)` 폴더 안에 웨이퍼별 상세 CSV `ProcessLog_<Carrier>.<Slot>_<C#W##>_<SystemWaferID>.csv`
@@ -90,4 +96,5 @@ Main/Project/Log(이름 가변)/Start Log/일별로그/날짜폴더(1010 등)/
 - ✓ 웹앱 3차 (2026-10-27): 위 5차 피드백 반영
 - ✓ 웹앱 4차 (2026-10-27): 위 6차 피드백 반영(원본 보존 저장, 항목 1~5·날짜 상세·에어백 세트, 4단 히트맵, 리셋)
 - ✓ 웹앱 5차 (2026-10-28): 取込 동작 점검, 진행률·파일별 오류 표시
+- ✓ 업로드 오류 수정 (2026-10-28): 드롭 실패 대책, 괄호 ID 파일명, 리셋 시 패널 삭제
 - 다음: 사용자 피드백 → Step2 BOX OAuth2 연동(GAS) → 트리거 자동 취합

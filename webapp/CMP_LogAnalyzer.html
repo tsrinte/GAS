@@ -336,6 +336,7 @@ details summary{cursor:pointer;font-size:12px;color:var(--accent);font-weight:70
        <small>またはクリックしてフォルダを選択</small>
      </div>
      <div class="row"><button class="btn sec" id="pickFiles">ファイルを個別に選択</button></div>
+     <p style="font-size:11px">ドロップで読めないときは、枠をクリックしてフォルダを選択してください(ブラウザが「アップロードしますか」と聞きますが、ファイルは PC の外に送られません)。</p>
      <input type="file" id="dirIn" webkitdirectory directory multiple hidden><input type="file" id="filesIn" multiple accept=".csv,.cvs,.xlsx" hidden>
    </div>
    <div class="srcc">
@@ -352,7 +353,7 @@ details summary{cursor:pointer;font-size:12px;color:var(--accent);font-weight:70
    </div>
   </div>
   <div class="imp" id="imp" hidden aria-live="polite">
-    <div class="row" style="justify-content:space-between"><b id="impTitle"></b><span class="row"><span class="note" style="margin:0" id="impTime"></span><button class="btn sec" id="impCancel" hidden>中止</button><button class="btn" id="impGo" hidden>Dashboard を見る</button></span></div>
+    <div class="row" style="justify-content:space-between"><b id="impTitle"></b><span class="row"><span class="note" style="margin:0" id="impTime"></span><button class="btn sec" id="impCancel" hidden>中止</button><button class="btn" id="impPick" hidden>フォルダを選択して取り込む</button><button class="btn" id="impGo" hidden>Dashboard を見る</button></span></div>
     <div class="pbar"><i id="impBar"></i></div>
     <div class="row" id="impStat" style="gap:6px"></div>
     <div class="note" id="impCur" style="margin:0;font-family:var(--mono);font-size:11px;overflow-wrap:anywhere"></div>
@@ -429,8 +430,9 @@ function parseDetail(text,name){
 function finalizeWafer(w){
   const I=w.info,g=(...ks)=>pick(I,...ks);
   const base=(w.file||'').split('/').pop();
-  const fm=/ProcessLog_(.+?)\.(\d+)_(C\d+W\d+)_(\d+)/i.exec(base);
-  w.id=w.id||(fm?fm[4]:((/_(\d+)(?:_[^_]*)?\.csv$/i.exec(base)||[])[1]||base));
+  // ファイル名 ProcessLog_<Carrier>.<Slot>_<C#W##>_<SystemWaferID>.csv(ID は (4099) のように括弧付きの場合あり)
+  const fm=/ProcessLog_(.+?)\.(\d+)_(C\d+W\d+)_\(?(\d+)\)?/i.exec(base);
+  w.id=w.id||(fm?fm[4]:((/_\(?(\d+)\)?(?:_[^_.]*)?\.(?:csv|cvs)$/i.exec(base)||[])[1]||base));
   w.carrier=w.carrier||g('キャリアID','CarrierID')||(fm?fm[1]:'');
   w.slot=w.slot||(fm?fm[2]:'');
   w.pos=w.pos||g('取出位置','SourcePosition')||(fm?fm[3]:'');
@@ -938,17 +940,42 @@ function impUI(){const s=IMP;if(!s)return;$('imp').hidden=false;const pct=s.tota
   $('impIssues').innerHTML=(iss.length?`<div class="tw" style="max-height:280px"><table><thead><tr><th class="l">種類</th><th class="l">ファイル / フォルダ</th><th class="l">内容</th></tr></thead><tbody>${
       iss.sort((a,b)=>a.lv===b.lv?0:a.lv==='err'?-1:1).slice(0,500).map(i=>`<tr><td class="l">${LV[i.lv]}</td><td class="l" style="white-space:normal;overflow-wrap:anywhere">${esc(i.path)}</td><td class="l" style="white-space:normal">${esc(i.msg)}</td></tr>`).join('')}</tbody></table></div>`:'')
     +(sk.length?`<details style="margin-top:6px"><summary>対象外として読み飛ばしたファイル ${sk.length} 件</summary><div class="tw" style="max-height:200px"><table><tbody>${sk.slice(0,500).map(i=>`<tr><td class="l" style="white-space:normal;overflow-wrap:anywhere">${esc(i.path)}</td><td class="l">${esc(i.msg)}</td></tr>`).join('')}</tbody></table></div></details>`:'');
-  $('impGo').hidden=!(s.n.det||s.n.total)}
-async function walkEntries(ents){const out=[];const walk=async(e,path)=>{if(IMP.cancel)return;
-    if(e.isFile){try{const f=await new Promise((res,rej)=>e.file(res,rej));out.push({file:f,path:path+f.name});IMP.total=out.length;await impTick()}catch(err){impIssue('err',path+e.name,'ファイルを開けません: '+(err&&err.message||err))}}
-    else if(e.isDirectory){const rd=e.createReader();let batch;do{batch=await new Promise((res,rej)=>rd.readEntries(res,rej));for(const c of batch)await walk(c,path+e.name+'/')}while(batch.length)}};
-  for(const e of ents)await walk(e,'');return out}
+  $('impGo').hidden=!(s.n.det||s.n.total);$('impPick').hidden=!!(s.n.det||s.n.total)||!s.n.err;
+  if(s.dropFallback)$('impIssues').insertAdjacentHTML('afterbegin','<p class="note" style="margin:0 0 6px;color:var(--warn)">ドロップしたフォルダの中を読めなかったため、ファイルだけを読み込みました。フォルダごと取り込むときは枠をクリックしてフォルダを選択してください。</p>')}
+// ブラウザのエラーを原因がわかる文に直す
+function readErr(e){const n=e&&e.name||'',m=e&&e.message||String(e);
+  if(n==='EncodingError')return'ブラウザがドラッグ&ドロップされた項目を読めませんでした(HTML をファイルとして開いたときのブラウザの制限)。枠をクリックしてフォルダを選択してください';
+  if(n==='NotReadableError')return'ファイルを読めません。BOX Drive などでまだ PC にダウンロードされていないファイルか、他のソフトで開いている可能性があります';
+  if(n==='NotFoundError')return'ファイルが見つかりません(取込中に移動・削除された可能性があります)';
+  if(n==='SecurityError'||n==='NotAllowedError')return'ブラウザがこのファイルへのアクセスを許可しませんでした。枠をクリックしてフォルダを選択してください';
+  return m}
+// 読めなかった項目をまとめて記録(同じ原因が多数のときは 1 行にまとめる)
+function walkFails(fails){if(!fails.length)return;const by={};for(const f of fails)(by[f.msg]??=[]).push(f.path);
+  for(const[msg,ps]of Object.entries(by)){if(ps.length<=5)ps.forEach(p=>impIssue('err',p,msg));else impIssue('err',`${ps[0]} ほか ${ps.length-1} 件`,msg)}}
+// 方法 1:File System Access API のハンドル(新しい方式)
+async function walkHandles(hs){const out=[],fails=[];const walk=async(h,path)=>{if(IMP.cancel)return;
+    try{if(h.kind==='file'){const f=await h.getFile();out.push({file:f,path:path+f.name});IMP.total=out.length;await impTick()}
+      else for await(const c of h.values())await walk(c,path+h.name+'/')}catch(err){fails.push({path:path+h.name,msg:readErr(err),err})}};
+  for(const h of hs)await walk(h,'');return{out,fails}}
+// 方法 2:webkitGetAsEntry(従来の方式)
+async function walkEntries(ents){const out=[],fails=[];const walk=async(e,path)=>{if(IMP.cancel)return;
+    try{if(e.isFile){const f=await new Promise((res,rej)=>e.file(res,rej));out.push({file:f,path:path+f.name});IMP.total=out.length;await impTick()}
+      else if(e.isDirectory){const rd=e.createReader();let batch;do{batch=await new Promise((res,rej)=>rd.readEntries(res,rej));for(const c of batch)await walk(c,path+e.name+'/')}while(batch.length)}}
+    catch(err){fails.push({path:path+e.name,msg:readErr(err),err})}};
+  for(const e of ents)await walk(e,'');return{out,fails}}
+// ドロップ:読める方法を順に試す。どれも読めないときはクリックでのフォルダ選択を案内
+async function dropList(hp,ents,files){let fails=[];
+  if(hp.length){try{const hs=(await Promise.all(hp)).filter(Boolean);if(hs.length){const r=await walkHandles(hs);if(r.out.length&&!r.fails.length)return r.out;if(r.out.length){walkFails(r.fails);return r.out}fails=r.fails}}catch(err){fails=[{path:'(ドロップ)',msg:readErr(err)}]}}
+  if(ents.length){const r=await walkEntries(ents);if(r.out.length){walkFails(r.fails);return r.out}if(!fails.length)fails=r.fails}
+  // 方法 3:ファイルそのもの(フォルダは中身を読めない)
+  const plain=files.filter(f=>f.size>0||f.type);if(plain.length){IMP.dropFallback=plain.length<files.length;return plain.map(f=>({file:f,path:f.name}))}
+  walkFails(fails.length?fails:[{path:'(ドロップ)',msg:'ドロップされた項目からファイルを取り出せませんでした。枠をクリックしてフォルダを選択してください'}]);IMP.needPick=true;return[]}
 // getList: ファイル一覧を返す関数(フォルダのドロップは中を順にたどる)
 async function runImport(getList){if(IMP&&IMP.running)return toast('取込中です。終わるまでお待ちください');
   IMP={t0:performance.now(),phase:'list',total:0,done:0,n:{det:0,job:0,sum:0,total:0,skip:0,warn:0,err:0},issues:[],cur:'',cancel:false,running:true,title:'',short:''};const s=IMP;
   $('impIssues').innerHTML='';$('impGo').hidden=true;impUI();await new Promise(r=>setTimeout(r));
   try{const list=await getList();s.phase='read';s.total=list.length;impUI();
-    if(!list.length)impIssue('err','(選択したもの)','ファイルが 1 つも見つかりませんでした。フォルダの中身を確認してください');else await importList(list)}
+    if(!list.length){if(!s.needPick)impIssue('err','(選択したもの)','ファイルが 1 つも見つかりませんでした。フォルダの中身を確認してください')}else await importList(list)}
   catch(e){console.error(e);impIssue('err','(取込全体)','予期しないエラーで止まりました: '+(e&&e.message||e))}
   s.running=false;const ok=s.n.det+s.n.total;
   s.title=s.cancel?`中止しました(${s.done.toLocaleString()} / ${s.total.toLocaleString()} ファイルまで反映)`:ok?`取込完了:${s.n.det.toLocaleString()} 件の詳細 CSV${s.n.total?` と Process_Total ${s.n.total} 件`:''}を読み込み、Dashboard に反映しました`+(s.n.err?`(エラー ${s.n.err} 件)`:s.n.warn?`(警告 ${s.n.warn} 件)`:''):s.n.job||s.n.sum?`Job.csv / Summary だけを読み込みました(詳細 CSV がないため Dashboard の数値は変わりません)`:`取り込めたデータはありません${s.n.err?`(エラー ${s.n.err} 件)`:''}。下の内容を確認してください`;
@@ -1219,18 +1246,22 @@ $('logDrop').onclick=()=>$('dirIn').click();$('logDrop').onkeydown=e=>{if(e.key=
 // 同じフォルダをもう一度選んでも動くように、読み取ったら選択をクリアする
 $('dirIn').onchange=e=>{const l=[...e.target.files].map(f=>({file:f,path:f.webkitRelativePath||f.name}));e.target.value='';if(l.length)runImport(async()=>l);else toast('フォルダの中にファイルがありません')};
 $('filesIn').onchange=e=>{const l=[...e.target.files].map(f=>({file:f,path:f.name}));e.target.value='';if(l.length)runImport(async()=>l)};
-$('impCancel').onclick=()=>{if(IMP)IMP.cancel=true};$('impGo').onclick=()=>document.querySelector('nav button[data-v=dash]').click();
+$('impCancel').onclick=()=>{if(IMP)IMP.cancel=true};$('impPick').onclick=()=>$('dirIn').click();$('impGo').onclick=()=>document.querySelector('nav button[data-v=dash]').click();
 function dropZone(el,onDrop){el.addEventListener('dragover',e=>{if([...e.dataTransfer.types].includes('Files')){e.preventDefault();el.classList.add('over')}});el.addEventListener('dragleave',e=>{if(!el.contains(e.relatedTarget))el.classList.remove('over')});
   el.addEventListener('drop',e=>{if(![...e.dataTransfer.types].includes('Files'))return;e.preventDefault();el.classList.remove('over');onDrop(e)})}
 // ドロップされた項目はイベント中にしか読めないので、先に取り出しておく
-dropZone($('logDrop'),e=>{const ents=[...e.dataTransfer.items].map(it=>it.webkitGetAsEntry&&it.webkitGetAsEntry()).filter(Boolean),files=[...e.dataTransfer.files];
-  runImport(async()=>ents.length?walkEntries(ents):files.map(f=>({file:f,path:f.name})))});
-$('saveTotal').onclick=saveTotal;$('loadSample').onclick=()=>{DB=makeSample();tablesOn=new Set(TABLES);chartOn=new Set(TABLES);devCell=null;refreshAll();toast('サンプルデータに戻しました')};
+dropZone($('logDrop'),e=>{const its=[...e.dataTransfer.items].filter(it=>it.kind==='file');
+  const hp=its.map(it=>{try{return it.getAsFileSystemHandle?it.getAsFileSystemHandle().catch(()=>null):null}catch(err){return null}}).filter(Boolean);
+  const ents=its.map(it=>{try{return it.webkitGetAsEntry&&it.webkitGetAsEntry()}catch(err){return null}}).filter(Boolean),files=[...e.dataTransfer.files];
+  runImport(()=>dropList(hp,ents,files))});
+// 取込の進み具合・エラー表示を消す
+function clearImp(){IMP=null;$('imp').hidden=true;$('impIssues').innerHTML='';$('impStat').innerHTML='';$('impTitle').textContent='';$('impCur').textContent='';$('prog').textContent='';$('pending').innerHTML=''}
+$('saveTotal').onclick=saveTotal;$('loadSample').onclick=()=>{if(IMP&&IMP.running)return toast('取込中です。中止してから戻してください');clearImp();DB=makeSample();tablesOn=new Set(TABLES);chartOn=new Set(TABLES);devCell=null;refreshAll();toast('サンプルデータに戻しました')};
 // 取込データのリセット(2 回押しで確定。元のファイルには影響しない)
-$('resetData').onclick=()=>{const b=$('resetData'),lab='取込データをリセット';clearTimeout(b._t);
+$('resetData').onclick=()=>{const b=$('resetData'),lab='取込データをリセット';clearTimeout(b._t);if(IMP&&IMP.running)return toast('取込中です。中止してからリセットしてください');
   if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='もう一度押すとリセット';b._t=setTimeout(()=>{b.classList.remove('armed');b.textContent=lab},4000);return}
   b.classList.remove('armed');b.textContent=lab;DB={wafers:[],jobs:[],summary:[],folders:{},errors:[],source:'empty'};tablesOn=new Set(TABLES);chartOn=new Set(TABLES);devCell=null;
-  $('pending').innerHTML='';$('prog').textContent='';refreshAll();toast('取込データをリセットしました。PC のフォルダから取り込んでください')};
+  clearImp();refreshAll();toast('取込データをリセットしました(取込結果とエラー表示も消去)。PC のフォルダから取り込んでください')};
 // Sequence
 $('seqOpenBtn').onclick=()=>$('seqFile').click();
 $('seqFile').onchange=async e=>{const f=e.target.files[0];if(f)await openSeq(await f.arrayBuffer(),f.name);e.target.value=''};
