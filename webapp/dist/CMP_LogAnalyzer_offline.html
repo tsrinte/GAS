@@ -1011,7 +1011,7 @@ function impUI(){const s=IMP;if(!s)return;$('imp').hidden=false;const pct=s.tota
 // ブラウザのエラーを原因がわかる文に直す
 function readErr(e){const n=e&&e.name||'',m=e&&e.message||String(e);
   if(n==='EncodingError')return'ブラウザがドラッグ&ドロップされた項目を読めませんでした(HTML をファイルとして開いたときのブラウザの制限)。枠をクリックしてフォルダを選択してください';
-  if(n==='NotReadableError')return'ファイルを読めません。BOX Drive などでまだ PC にダウンロードされていないファイルか、他のソフトで開いている可能性があります';
+  if(n==='NotReadableError')return'ファイルを読めません(3 回試行)。BOX Drive の「オンラインのみ」のファイルで、ダウンロードできなかった(インターネット未接続など)か、他のソフトで開いている可能性があります。BOX Drive ではフォルダを右クリック →「オフラインで使用可能にする」にしてから取り込むと確実です';
   if(n==='NotFoundError')return'ファイルが見つかりません(取込中に移動・削除された可能性があります)';
   if(n==='SecurityError'||n==='NotAllowedError')return'ブラウザがこのファイルへのアクセスを許可しませんでした。枠をクリックしてフォルダを選択してください';
   return m}
@@ -1036,6 +1036,9 @@ async function dropList(hp,ents,files){let fails=[];
   // 方法 3:ファイルそのもの(フォルダは中身を読めない)
   const plain=files.filter(f=>f.size>0||f.type);if(plain.length){IMP.dropFallback=plain.length<files.length;return plain.map(f=>({file:f,path:f.name}))}
   walkFails(fails.length?fails:[{path:'(ドロップ)',msg:'ドロップされた項目からファイルを取り出せませんでした。枠をクリックしてフォルダを選択してください'}]);IMP.needPick=true;return[]}
+// ファイルを読む。BOX Drive の「オンラインのみ」ファイルは読むときにダウンロードされ、最初の読込に失敗することがあるので、少し待って 2 回まで読み直す
+async function readFile(it){for(let i=0;;i++){try{return await it.file.arrayBuffer()}catch(e){if(i>=2||!/NotReadable|NotFound/.test(e&&e.name||''))throw e;
+  IMP.cur=`${it.path}(読み直し ${i+1} 回目…)`;impUI();await new Promise(r=>setTimeout(r,1500*(i+1)))}}}
 // getList: ファイル一覧を返す関数(フォルダのドロップは中を順にたどる)
 async function runImport(getList){if(IMP&&IMP.running)return toast('取込中です。終わるまでお待ちください');
   IMP={t0:performance.now(),phase:'list',total:0,done:0,n:{det:0,job:0,sum:0,total:0,skip:0,warn:0,err:0},issues:[],cur:'',cancel:false,running:true,title:'',short:''};const s=IMP;
@@ -1053,11 +1056,11 @@ async function importList(list){const s=IMP;const dir=p=>p.includes('/')?p.slice
   const xl=list.filter(x=>ftype(x.file.name)==='xlsx'),csv=list.filter(x=>['csv','cvs'].includes(ftype(x.file.name))),other=list.filter(x=>!xl.includes(x)&&!csv.includes(x));
   for(const it of other){impIssue('skip',it.path,ftype(it.file.name)?`CSV ではありません(.${ftype(it.file.name)})`:'拡張子がありません');s.done++}
   for(const it of xl){if(s.cancel)break;s.cur=it.path;await impTick(true);
-    try{const n=await loadTotal(await it.file.arrayBuffer(),it.file.name);if(n)s.n.total++;else impIssue('skip',it.path,'Process_Total 形式(Wafers / Raw シート)ではない .xlsx')}
+    try{const n=await loadTotal(await readFile(it),it.file.name);if(n)s.n.total++;else impIssue('skip',it.path,'Process_Total 形式(Wafers / Raw シート)ではない .xlsx')}
     catch(e){impIssue('err',it.path,'Process_Total を読めません: '+(e&&e.message||e))}s.done++}
   for(const it of csv){if(s.cancel)break;s.cur=it.path;await impTick();
     try{if(!it.file.size){impIssue('err',it.path,'ファイルが空です(0 バイト)');s.done++;continue}
-      const t=decodeBuf(await it.file.arrayBuffer());const first=(t.replace(/^﻿/,'').split(/\r?\n/,1)[0]||'');const d=dir(it.path);
+      const t=decodeBuf(await readFile(it));const first=(t.replace(/^﻿/,'').split(/\r?\n/,1)[0]||'');const d=dir(it.path);
       // 中身で種類を判定(ファイル名に依存しない)
       if(/(^|,)"?SystemWaferList"?(,|$)/.test(first)){const js=parseJob(t,d);(jobsBy[d]=jobsBy[d]||[]).push(...js);s.n.job++;if(!js.length)impIssue('warn',it.path,'Job.csv にデータ行がありません')}
       else if(/(^|,)"?SystemWaferID"?(,|$)/.test(first)){const ss=parseSummary(t,d);(sumBy[d]=sumBy[d]||[]).push(...ss);s.n.sum++;if(!ss.length)impIssue('warn',it.path,'Summary.csv にデータ行がありません')}
@@ -1066,7 +1069,7 @@ async function importList(list){const s=IMP;const dir=p=>p.includes('/')?p.slice
         else{s.n.det++;newW.push(w);if(!w.date)impIssue('warn',it.path,'開始時刻(WaferInfo の 開始時刻)が読めないため、日付別の集計に入りません');
           if(!TABLES.includes(w.table))impIssue('warn',it.path,`テーブルを判定できません(プロセスルート「${w.route||'空欄'}」)`)}}
       else impIssue('skip',it.path,`ProcessLog の形式ではありません(1 行目: ${first.slice(0,60)}${first.length>60?'…':''})`)}
-    catch(e){impIssue('err',it.path,'読込エラー: '+(e&&e.message||e))}s.done++}
+    catch(e){impIssue('err',it.path,/Error$/.test(e&&e.name||'')&&e.name!=='Error'&&e.name!=='TypeError'?readErr(e):'読込エラー: '+(e&&e.message||e))}s.done++}
   if(s.cancel)impIssue('warn','(中止)',`${(s.total-s.done).toLocaleString()} ファイルは読み込んでいません`);
   s.phase='link';s.cur='';await impTick(true);
   const jdirs=Object.keys({...jobsBy,...sumBy}).sort((a,b)=>b.length-a.length);
