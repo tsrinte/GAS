@@ -462,13 +462,19 @@ function parseCSV(t){t=t.replace(/^﻿/,'');const rows=[];let row=[],f='',q=fals
     else if(c==='"')q=true; else if(c===','){row.push(f);f=''}
     else if(c==='\n'){row.push(f);rows.push(row);row=[];f=''} else if(c!=='\r')f+=c}
   if(f!==''||row.length){row.push(f);rows.push(row)}return rows}
-function num(v){if(v==null)return null;const s=String(v).trim();if(s==='')return null;const n=Number(s);return isFinite(n)?n:s}
+function num(v){if(v==null)return null;let s=String(v).trim();if(s==='')return null;if(/^[+-]?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s))s=s.replace(/,/g,'');const n=Number(s);return isFinite(n)?n:s}
+// 日時の書き方(2026/10/22 6:05:09 など)をそろえる:YYYY-MM-DD HH:MM(秒があれば :SS)
+function normTime(v){const m=/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(v||'');if(!m)return v||'';const p=x=>String(x).padStart(2,'0');return`${m[1]}-${p(m[2])}-${p(m[3])} ${p(m[4])}:${m[5]}${m[6]?':'+m[6]:''}`}
+// CSV の種類を中身で判定(値が "…" で囲まれていても、列の位置がずれていても判定できるよう、CSV として読んだ後のセルの値で見る)
+function csvKind(text){const rows=parseCSV(text.slice(0,60000)).slice(0,80).map(r=>r.map(c=>c.replace(/^\uFEFF/,'').trim()));
+  if(rows.some(r=>r.includes('SystemOrder')&&r.some(c=>/^(Caption|Item|Title)$/.test(c))))return'det';
+  const h=rows.find(r=>r.some(Boolean))||[];if(h.includes('SystemWaferList'))return'job';if(h.includes('SystemWaferID'))return'sum';return null}
 function ymd(s){const m=/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/.exec(s||'');return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:''}
 function parseTable(text){const rows=parseCSV(text);if(!rows.length)return[];const h=rows[0].map(c=>c.trim());
   return rows.slice(1).filter(r=>r.some(c=>c.trim())).map(r=>Object.fromEntries(h.map((k,i)=>[k,(r[i]??'').trim()])))}
 const pick=(o,...ks)=>{for(const k of ks)if(o[k]!=null&&o[k]!=='')return o[k];return''};
 function parseJob(text,folder){return parseTable(text).map(r=>({sysLot:pick(r,'SystemLotID'),carrier:pick(r,'Carrier'),lotId:pick(r,'LotID'),cj:pick(r,'CJID'),recipe:pick(r,'TotalRecipe'),
-  list:pick(r,'SystemWaferList').split(/[;|]/).map(s=>s.trim()).filter(Boolean),port:pick(r,'Port'),wafers:+pick(r,'Wafers')||0,state:pick(r,'State'),start:pick(r,'StartingTime'),end:pick(r,'EndingTime'),folder}))}
+  list:pick(r,'SystemWaferList').split(/[;|]/).map(s=>s.trim()).filter(Boolean),port:pick(r,'Port'),wafers:+pick(r,'Wafers')||0,state:pick(r,'State'),start:normTime(pick(r,'StartingTime')),end:normTime(pick(r,'EndingTime')),folder}))}
 function parseSummary(text,folder){return parseTable(text).map(r=>({wid:pick(r,'SystemWaferID'),sysLot:pick(r,'SystemLotID'),pos:pick(r,'取出位置'),route:pick(r,'プロセスルート'),folder}))}
 
 function parseDetail(text,name){
@@ -476,12 +482,12 @@ function parseDetail(text,name){
   let hdr=null,sec=null,ix=null;
   for(const r of rows){
     if(!r.some(c=>c.trim()!=='')){hdr=null;continue}
-    if((r[1]||'').trim()==='SystemOrder'){sec=r[0].trim();hdr=r.map(c=>c.trim());
+    if(r.some(c=>c.trim()==='SystemOrder')){sec=r[0].replace(/^\uFEFF/,'').trim();hdr=r.map(c=>c.trim());
       const f=ns=>hdr.findIndex(h=>ns.includes(h));
       ix={cat:f(['SystemCategroy','SystemCategory']),cap:f(['Caption','Item','Title']),unit:f(['Unit']),val:f(['Value']),steps:[]};
       hdr.forEach((h,i)=>{const m=/^Step(\d+)$/i.exec(h);if(m)ix.steps.push([+m[1],i])});
       const pm=/^Polisher([A-Z])_/i.exec(sec);if(pm)w.polisher=pm[1].toUpperCase();continue}
-    if(!hdr||r[0].trim()!==sec||ix.cap<0)continue;
+    if(!hdr||r[0].replace(/^\uFEFF/,'').trim()!==sec||ix.cap<0)continue;
     const cap=(r[ix.cap]||'').trim();if(!cap)continue;
     if(sec==='WaferInfo'){w.info[cap]=(r[ix.val]||'').trim();continue}
     const sk=sec.replace(/^Polisher[A-Z]_/i,'Polisher_');
@@ -505,8 +511,8 @@ function finalizeWafer(w){
   w.cj=w.cj||g('コントロールジョブID','ControlJobID');w.pj=w.pj||g('プロセスジョブID','ProcessJobID');
   w.lot=w.lot||g('ロットID','LotID');w.recipe=w.recipe||g('全体レシピID','RecipeID','TotalRecipe');
   w.route=w.route||g('プロセスルート','ProcessRoute');w.croute=w.croute||g('クリーナルート','CleanerRoute');
-  w.status=w.status||g('プロセスステータス','ProcessStatus');w.start=w.start||g('開始時刻','StartTime');w.end=w.end||g('終了時刻','EndTime');
-  w.date=w.date||ymd(w.start);
+  w.status=w.status||g('プロセスステータス','ProcessStatus');w.start=normTime(w.start||g('開始時刻','StartTime'));w.end=normTime(w.end||g('終了時刻','EndTime'));
+  w.date=w.date||ymd(w.start)||ymd(w.end);
   w.table=w.table||(((/Table\s*([A-Z])/i.exec(w.route)||[])[1]||w.polisher||'?').toUpperCase());
   w.polisher=w.polisher||w.table;
   w._f={};w._v={};
@@ -1062,9 +1068,10 @@ async function importList(list){const s=IMP;const dir=p=>p.includes('/')?p.slice
     try{if(!it.file.size){impIssue('err',it.path,'ファイルが空です(0 バイト)');s.done++;continue}
       const t=decodeBuf(await readFile(it));const first=(t.replace(/^﻿/,'').split(/\r?\n/,1)[0]||'');const d=dir(it.path);
       // 中身で種類を判定(ファイル名に依存しない)
-      if(/(^|,)"?SystemWaferList"?(,|$)/.test(first)){const js=parseJob(t,d);(jobsBy[d]=jobsBy[d]||[]).push(...js);s.n.job++;if(!js.length)impIssue('warn',it.path,'Job.csv にデータ行がありません')}
-      else if(/(^|,)"?SystemWaferID"?(,|$)/.test(first)){const ss=parseSummary(t,d);(sumBy[d]=sumBy[d]||[]).push(...ss);s.n.sum++;if(!ss.length)impIssue('warn',it.path,'Summary.csv にデータ行がありません')}
-      else if(/(^|\n)[^,\n]*,SystemOrder,/.test(t.slice(0,20000))){const w=parseDetail(t,it.path);w.folder=d;
+      const kind=csvKind(t);
+      if(kind==='job'){const js=parseJob(t,d);(jobsBy[d]=jobsBy[d]||[]).push(...js);s.n.job++;if(!js.length)impIssue('warn',it.path,'Job.csv にデータ行がありません')}
+      else if(kind==='sum'){const ss=parseSummary(t,d);(sumBy[d]=sumBy[d]||[]).push(...ss);s.n.sum++;if(!ss.length)impIssue('warn',it.path,'Summary.csv にデータ行がありません')}
+      else if(kind==='det'){const w=parseDetail(t,it.path);w.folder=d;
         if(!Object.keys(w.steps).length)impIssue('err',it.path,'Step データ(PolisherX_G3_Step セクション)が見つかりません');
         else{s.n.det++;newW.push(w);if(!w.date)impIssue('warn',it.path,'開始時刻(WaferInfo の 開始時刻)が読めないため、日付別の集計に入りません');
           if(!TABLES.includes(w.table))impIssue('warn',it.path,`テーブルを判定できません(プロセスルート「${w.route||'空欄'}」)`)}}
