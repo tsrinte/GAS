@@ -15,6 +15,14 @@ Google Workspace Enterprise 환경에서 GAS + Box API + HTML Web App으로 작�
 | `handover/source/CODE/HISTORY/` | 구현 이력. 같은 GAS 프로젝트에 모두 붙여넣지 말 것 (함수/상수 중복) |
 | `handover/source/SOURCE_DATA/` | 개발용 원본 Excel/PDF 샘플, Mapping 이력 v0.1~v4.9 |
 | `handover/source/EVIDENCE/` | 테스트 증빙 PDF, 스크린샷 |
+| `handover/revised_20261112_unverified/` | **수정본 4개 (회사 GAS 미검증, LOCAL-SIM PASS만)**. 교체 방법·테스트·성공조건은 폴더 안 README |
+
+### 검증 상태 (2026-11-13 기준)
+
+| 구분 | 위치 | 상태 |
+|---|---|---|
+| 인수 원본 코드 | `handover/source/CODE/CURRENT_PROPOSED/` | 일부만 회사 GAS 실행 이력 있음. 판정은 `CURRENT_STATUS.md` 기준 |
+| 수정본 (TroubleListReader v7, ReferenceDataService v6, Step5WebApiTest v4, Index v0.6.1) | `handover/revised_20261112_unverified/gas/` | **코드 작성 + 로컬 모의 실행 통과만. 회사 GAS `/dev` 미실행 → VERIFIED 아님** |
 
 ### 원본 파일
 
