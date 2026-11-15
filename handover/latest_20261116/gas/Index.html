@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<!-- Index v0.7.0 (2026-11-16): 画面を全面再設計。
+     - 1 ページで上から順に入力 (①作業 → ②共通情報 → ③職長・作業者 → ④書類ごとの入力)
+     - 右側 (スマホは下) に「書類を作成」パネル。4 書類それぞれの準備状況と不足項目を常に表示。
+       不足項目を押すとその入力欄へ移動する。
+     - KY / 簡易レポートの入力欄が表示されない不具合を修正 (v0.6 では描画関数が呼ばれていなかった)。
+     - サーバー API は v0.6.6 と同一:
+         apiBootstrap / apiLoadJob / apiGenerateEmergPreview(input, requestId) /
+         apiGetEmergPreviewResult(requestId) / apiGenerateWorkerLedgerPreview(input)
+       送信する input の形 (collectDraftInput) も v0.6.6 と同一。
+     - KY シート / 簡易レポートの出力はサーバー側が未実装のため「準備中」と表示 (ボタン無し)。 -->
+<html lang="ja">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #f3f5f8;
+      --card: #ffffff;
+      --line: #d9dfe7;
+      --line-strong: #b8c2ce;
+      --text: #18222d;
+      --muted: #5c6b7a;
+      --accent: #1a5fb4;
+      --accent-dark: #134a8e;
+      --accent-soft: #e8f1fb;
+      --ok: #1e7b45;
+      --ok-bg: #e9f6ee;
+      --ok-line: #b5dcc3;
+      --warn: #8a5a00;
+      --warn-bg: #fff6df;
+      --warn-line: #ecd08a;
+      --danger: #b42318;
+      --danger-bg: #fdecea;
+      --idle-bg: #eef1f5;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Meiryo", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .topbar {
+      background: var(--accent-dark);
+      color: #fff;
+      padding: 14px 20px;
+    }
+
+    .topbar-inner {
+      max-width: 1240px;
+      margin: 0 auto;
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .topbar h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: .02em; }
+
+    .topbar .sub { font-size: 13px; opacity: .85; }
+
+    .layout {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 18px 16px 60px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px 20px 20px;
+      margin-bottom: 16px;
+    }
+
+    .card.locked { opacity: .45; pointer-events: none; }
+
+    .step-head { display: flex; align-items: center; gap: 10px; margin: 0 0 4px; }
+
+    .step-no {
+      flex: none;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .step-head h2 { margin: 0; font-size: 17px; font-weight: 700; }
+
+    .step-note { margin: 0 0 14px 38px; color: var(--muted); font-size: 13px; }
+
+    label.lbl { display: block; font-size: 13px; font-weight: 700; margin-bottom: 4px; color: #2d3b49; }
+
+    .req { color: var(--danger); font-weight: 700; margin-left: 4px; font-size: 12px; }
+
+    .hint { color: var(--muted); font-size: 12px; font-weight: 400; margin-left: 6px; }
+
+    input[type="text"], input[type="date"], input[type="search"], select {
+      width: 100%;
+      min-height: 42px;
+      padding: 8px 10px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    input:focus, select:focus, button:focus-visible, .seg label:focus-within {
+      outline: 3px solid #9cc3f0;
+      outline-offset: 1px;
+      border-color: var(--accent);
+    }
+
+    .flash { animation: flash 1.2s ease-out; }
+
+    @keyframes flash {
+      0% { box-shadow: 0 0 0 4px #f7c948; }
+      100% { box-shadow: 0 0 0 0 rgba(247, 201, 72, 0); }
+    }
+
+    .grid { display: grid; gap: 12px 14px; }
+    .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .job-row { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px 14px; }
+
+    .facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+
+    .fact {
+      background: var(--idle-bg);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    .fact b { display: block; font-size: 11px; color: var(--muted); font-weight: 700; }
+
+    details.more { margin-top: 14px; border-top: 1px dashed var(--line); padding-top: 10px; }
+
+    details.more summary { cursor: pointer; color: var(--accent); font-weight: 700; font-size: 14px; padding: 4px 0; }
+
+    details.more .grid { margin-top: 10px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; align-items: center; color: var(--muted); font-size: 13px; }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: var(--idle-bg);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 1px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .chip.on { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok); font-weight: 700; }
+
+    .workers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+
+    .worker { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #fbfcfd; }
+
+    .worker .wtop { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 8px; align-items: center; margin-bottom: 6px; }
+
+    .worker .wno { font-size: 13px; font-weight: 700; color: var(--muted); }
+
+    .notice {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--warn-line);
+      background: var(--warn-bg);
+      color: var(--warn);
+      font-size: 13px;
+      white-space: pre-line;
+    }
+
+    .notice.show { display: block; }
+
+    .doc-block { border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-top: 12px; }
+
+    .doc-block h3 { margin: 0 0 2px; font-size: 15px; }
+
+    .doc-block .desc { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+
+    .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
+
+    .seg label { padding: 9px 26px; cursor: pointer; background: #fff; font-weight: 700; border-right: 1px solid var(--line-strong); }
+
+    .seg label:last-child { border-right: 0; }
+
+    .seg input { position: absolute; opacity: 0; width: 0; height: 0; }
+
+    .seg label.checked { background: var(--accent); color: #fff; }
+
+    .ky-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+
+    .ky-group { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+
+    .ky-group-title { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+
+    .ky-item { display: flex; align-items: center; gap: 8px; padding: 5px 2px; cursor: pointer; font-size: 14px; }
+
+    .ky-item input { width: 18px; height: 18px; flex: none; }
+
+    table.simple { width: 100%; border-collapse: collapse; }
+
+    table.simple th { text-align: left; font-size: 12px; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+
+    table.simple td { padding: 6px; border-bottom: 1px solid var(--line); font-size: 14px; }
+
+    table.simple td:last-child { width: 55%; }
+
+    /* ---------- 出力パネル ---------- */
+    .side { position: sticky; top: 12px; }
+
+    .side .card { padding: 16px; margin-bottom: 0; }
+
+    .side h2 { margin: 0 0 2px; font-size: 16px; }
+
+    .side .side-note { margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+
+    .doc {
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--line-strong);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      background: #fff;
+    }
+
+    .doc.ready { border-left-color: var(--ok); }
+    .doc.todo { border-left-color: #e0a100; }
+    .doc.done { border-left-color: var(--ok); background: var(--ok-bg); }
+    .doc.soon { background: var(--idle-bg); }
+
+    .doc-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+    .doc-name { font-weight: 700; font-size: 14px; }
+
+    .doc-kind { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+
+    .pill { flex: none; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 9px; background: var(--idle-bg); color: var(--muted); white-space: nowrap; }
+
+    .doc.ready .pill, .doc.done .pill { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok-line); }
+    .doc.todo .pill { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-line); }
+
+    .missing { margin: 8px 0 0; padding: 0; list-style: none; }
+
+    .missing li { margin: 0 0 4px; }
+
+    .missing button {
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--warn-line);
+      background: var(--warn-bg);
+      color: var(--warn);
+      border-radius: 6px;
+      padding: 5px 8px;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .missing button::after { content: " ›"; font-weight: 700; }
+
+    .doc-msg { margin-top: 8px; font-size: 13px; word-break: break-all; }
+
+    .doc-msg:empty { display: none; }
+
+    .doc-msg.err { color: var(--danger); }
+
+    .doc-msg a { color: var(--accent); font-weight: 700; }
+
+    .doc-msg small { color: var(--muted); display: block; margin-top: 2px; }
+
+    button.btn {
+      min-height: 42px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+      background: #fff;
+      color: var(--accent);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.btn.primary { background: var(--accent); color: #fff; }
+
+    button.btn:hover:not(:disabled) { background: var(--accent-dark); color: #fff; }
+
+    button.btn:disabled { border-color: var(--line); background: var(--idle-bg); color: #8c98a5; cursor: not-allowed; }
+
+    .doc button.btn { width: 100%; margin-top: 8px; }
+
+    .all-btn { width: 100%; margin-top: 4px; min-height: 48px; font-size: 15px; }
+
+    .loading {
+      position: fixed; inset: 0;
+      background: rgba(24, 34, 45, .45);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 50;
+    }
+
+    .loading.show { display: flex; }
+
+    .loading-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 26px;
+      font-weight: 700;
+      display: flex; align-items: center; gap: 12px;
+      max-width: 90vw;
+    }
+
+    .spinner {
+      width: 22px; height: 22px; flex: none;
+      border: 3px solid var(--accent-soft);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-bar {
+      display: none;
+      max-width: 1208px;
+      margin: 12px auto 0;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: var(--danger-bg);
+      border: 1px solid #f3b7b1;
+      color: var(--danger);
+      font-size: 14px;
+      white-space: pre-line;
+    }
+
+    .error-bar.show { display: block; }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .side { position: static; }
+    }
+
+    @media (max-width: 640px) {
+      .g2, .g3, .workers, .ky-groups, .job-row { grid-template-columns: 1fr; }
+      .card { padding: 14px; }
+      .step-note { margin-left: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .flash, .spinner { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <h1>作業前書類 自動作成</h1>
+      <span class="sub">作業を選び、上から順に入力すると書類を作成できます</span>
+    </div>
+  </header>
+
+  <div id="errorBar" class="error-bar" role="alert"></div>
+
+  <div class="layout">
+    <main>
+      <!-- ① -->
+      <section class="card" id="sec-job">
+        <div class="step-head"><span class="step-no">1</span><h2>作業を選ぶ</h2></div>
+        <p class="step-note" id="sourceInfo">トラブル管理リストを読込中...</p>
+
+        <div class="job-row">
+          <div>
+            <label class="lbl" for="jobFilter">絞り込み<span class="hint">No. / 装置ID / トラブル名</span></label>
+            <input id="jobFilter" type="search" placeholder="例: D507" autocomplete="off">
+          </div>
+          <div>
+            <label class="lbl" for="jobSelect">対象作業<span class="req">必須</span></label>
+            <select id="jobSelect" disabled>
+              <option value="">読込中...</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- ② -->
+      <section class="card locked" id="sec-basic">
+        <div class="step-head"><span class="step-no">2</span><h2>共通の情報</h2></div>
+        <p class="step-note">すべての書類に使います。自動で入った内容は、違っていれば直せます。</p>
+
+        <div class="facts">
+          <div class="fact"><b>No.</b><span id="factNo">-</span></div>
+          <div class="fact"><b>装置ID</b><span id="factMachine">-</span></div>
+          <div class="fact"><b>建屋</b><span id="factBuilding">-</span></div>
+        </div>
+
+        <div class="grid g3">
+          <div>
+            <label class="lbl" for="workDate">作業日<span class="req">必須</span></label>
+            <input id="workDate" type="date" lang="ja">
+          </div>
+          <div>
+            <label class="lbl" for="startTime">開始時刻<span class="req">必須</span><span class="hint">例 10:00</span></label>
+            <input id="startTime" type="text" inputmode="numeric" placeholder="HH:MM" maxlength="5">
+          </div>
+          <div></div>
+        </div>
+
+        <div style="height:12px;"></div>
+
+        <div>
+          <label class="lbl" for="workTitle">作業名<span class="req">必須</span><span class="hint">自動入力・修正できます</span></label>
+          <input id="workTitle" type="text">
+        </div>
+
+        <details class="more">
+          <summary>装置・客先の情報を確認 / 修正する</summary>
+          <div class="grid g2">
+            <div>
+              <label class="lbl" for="equipmentModel">装置名 / 型式</label>
+              <input id="equipmentModel" type="text">
+            </div>
+            <div>
+              <label class="lbl" for="customerName">客先名</label>
+              <input id="customerName" type="text">
+            </div>
+            <div>
+              <label class="lbl" for="workLocation">作業場所</label>
+              <input id="workLocation" type="text">
+            </div>
+            <div>
+              <label class="lbl" for="serialNo">製造番号</label>
+              <input id="serialNo" type="text">
+            </div>
+            <div>
+              <label class="lbl" for="oldSerial">旧制番</label>
+              <input id="oldSerial" type="text">
+            </div>
+          </div>
+        </details>
+
+        <div id="basicWarning" class="notice"></div>
+      </section>
+
+      <!-- ③ -->
+      <section class="card locked" id="sec-workers">
+        <div class="step-head"><span class="step-no">3</span><h2>職長・作業者</h2></div>
+        <p class="step-note">資格は名簿から自動で表示されます。作業者は 1〜6 名を選びます。</p>
+
+        <div class="grid g2">
+          <div>
+            <label class="lbl" for="leaderSelect">職長<span class="req">必須</span></label>
+            <select id="leaderSelect"></select>
+          </div>
+          <div>
+            <label class="lbl" for="leaderPHS">職長 PHS<span class="req">必須</span></label>
+            <input id="leaderPHS" type="text" inputmode="numeric" placeholder="PHS">
+          </div>
+        </div>
+
+        <div style="height:8px;"></div>
+        <div id="leaderQual" class="chips">職長を選ぶと資格が表示されます</div>
+        <div id="workerWarning" class="notice"></div>
+
+        <div style="height:16px;"></div>
+        <div class="lbl" style="display:block;font-size:13px;font-weight:700;margin-bottom:4px;">作業者<span class="hint">作業者名簿台帳には 1 名以上が必要です</span></div>
+        <div class="workers" id="workerList"></div>
+      </section>
+
+      <!-- ④ -->
+      <section class="card locked" id="sec-docs">
+        <div class="step-head"><span class="step-no">4</span><h2>書類ごとの入力</h2></div>
+        <p class="step-note">書類によって必要な項目だけを入力します。</p>
+
+        <div class="doc-block" id="blk-emerg">
+          <h3>突発作業チェックシート</h3>
+          <p class="desc">この作業はどちらですか。<span class="req">必須</span></p>
+          <div class="seg" id="modeSeg" role="radiogroup" aria-label="修理 / トラブル">
+            <label><input type="radio" name="repairTroubleMode" value="REPAIR">修理</label>
+            <label><input type="radio" name="repairTroubleMode" value="TROUBLE">トラブル</label>
+          </div>
+          <div id="emergWarning" class="notice"></div>
+        </div>
+
+        <div class="doc-block" id="blk-ky">
+          <h3>KY シート</h3>
+          <p class="desc">作業区分と、当てはまる危険予知の項目にチェックを入れます。</p>
+          <div style="max-width:320px;">
+            <label class="lbl" for="workType">作業区分</label>
+            <select id="workType">
+              <option value="">選択してください</option>
+              <option>調査</option>
+              <option>修理</option>
+              <option>点検</option>
+              <option>定期メンテ</option>
+              <option>移設</option>
+              <option>新規</option>
+              <option>改造</option>
+              <option>清掃</option>
+              <option>サンプリング</option>
+              <option>カラム交換</option>
+              <option>ポンプ交換</option>
+              <option>部品納品</option>
+            </select>
+          </div>
+          <div id="kyChecklist" class="ky-groups"></div>
+          <div id="kyWarning" class="notice"></div>
+        </div>
+
+        <div class="doc-block" id="blk-simple">
+          <h3>簡易レポート</h3>
+          <p class="desc">プロセス消耗品の対応を選びます (装置の種類に合う項目だけ表示)。</p>
+          <div id="simpleConsumables"></div>
+          <div id="simpleWarning" class="notice"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 出力パネル -->
+    <aside class="side" id="sec-output">
+      <div class="card">
+        <h2>書類を作成</h2>
+        <p class="side-note" id="sideNote">作業を選ぶと、ここに準備状況が表示されます。</p>
+
+        <div class="doc" id="doc-emerg">
+          <div class="doc-top">
+            <div class="doc-name">突発作業チェックシート<span class="doc-kind">PDF</span></div>
+            <span class="pill">未入力</span>
+          </div>
+          <ul class="missing"></ul>
+          <button class="btn primary" type="button" data-doc="emerg" disabled>作成する</button>
+          <div class="doc-msg"></div>
+        </div>
+
+        <div class="doc" id="doc-worker">
+          <div class="doc-top">
+            <div class="doc-name">作業者名簿台帳<span class="doc-kind">Excel</span></div>
+            <span class="pill">未入力</span>
+          </div>
+          <ul class="missing"></ul>
+          <button class="btn primary" type="button" data-doc="worker" disabled>作成する</button>
+          <div class="doc-msg"></div>
+        </div>
+
+        <div class="doc soon" id="doc-ky">
+          <div class="doc-top">
+            <div class="doc-name">KY シート</div>
+            <span class="pill">準備中</span>
+          </div>
+          <div class="doc-msg"><small>出力機能を開発中です。入力欄は先に確認できます。</small></div>
+        </div>
+
+        <div class="doc soon" id="doc-simple">
+          <div class="doc-top">
+            <div class="doc-name">簡易レポート</div>
+            <span class="pill">準備中</span>
+          </div>
+          <div class="doc-msg"><small>出力機能を開発中です。入力欄は先に確認できます。</small></div>
+        </div>
+
+        <button id="allBtn" class="btn all-btn" type="button" disabled>準備できた書類をまとめて作成</button>
+        <p class="side-note" style="margin:10px 0 0;">保存先は Box のテスト用フォルダです。原本のファイルは変更しません。同じ作業でもう一度作成すると、同じファイルの新しい版になります。</p>
+      </div>
+    </aside>
+  </div>
+
+  <div id="loading" class="loading" role="status" aria-live="polite">
+    <div class="loading-box"><span class="spinner"></span><span id="loadingText">読込中...</span></div>
+  </div>
+
+  <script>
+    const APP = {
+      jobs: [],
+      loaded: null,
+      currentJobKey: '',
+      busy: false
+    };
+
+    const WORKER_SLOTS = 6;
+
+    const KY_ITEMS = [
+      {group:'作業環境', cell:'D14', label:'高所作業'},
+      {group:'作業環境', cell:'D15', label:'重量物取り扱い'},
+      {group:'作業環境', cell:'D17', label:'床を開口しての作業'},
+      {group:'作業環境', cell:'D18', label:'外装パネル取り外し'},
+      {group:'作業環境', cell:'D19', label:'作業範囲内近傍EMO確認'},
+      {group:'電気関連', cell:'D20', label:'配線作業'},
+      {group:'電気関連', cell:'D21', label:'ブレーカON/OFF作業'},
+      {group:'電気関連', cell:'D22', label:'テスター等使用しての作業'},
+      {group:'配管作業', cell:'D23', label:'配管作業'},
+      {group:'配管作業', cell:'D24', label:'薬液(強酸/強アル)配管作業'},
+      {group:'薬品作業', cell:'D25', label:'薬液使用部にての作業'},
+      {group:'薬品作業', cell:'D26', label:'その他'},
+      {group:'機械動作', cell:'D27', label:'稼動部動作中の作業'},
+      {group:'機械動作', cell:'D28', label:'分解/組み立て作業'},
+      {group:'廃棄物関連', cell:'D29', label:'廃棄物(部品等)が発生する作業'},
+      {group:'廃棄物関連', cell:'D31', label:'薬液付着した廃棄物が発生する作業'},
+      {group:'工具使用', cell:'D33', label:'標準工具使用作業'},
+      {group:'工具使用', cell:'D34', label:'ドリル等使用作業'},
+      {group:'工具使用', cell:'D36', label:'半田等使用作業'},
+      {group:'工具使用', cell:'D37', label:'ドライヤー使用作業'},
+      {group:'工具使用', cell:'D38', label:'電気機器、工具使用作業'}
+    ];
+
+    const SIMPLE_ITEMS = [
+      {row:33, label:'トップリングヘッド', reuse:true},
+      {row:34, label:'ドレッサー', reuse:true},
+      {row:35, label:'パッド', reuse:false},
+      {row:36, label:'ロールスポンジ', reuse:true},
+      {row:37, label:'ペンシルスポンジ', reuse:true},
+      {row:38, label:'ステージローラ', reuse:true},
+      {row:39, label:'ベベルスポンジ', reuse:true},
+      {row:40, label:'研磨テープ', reuse:true},
+      {row:41, label:'バックパッド', reuse:true},
+      {row:42, label:'バッキングフィルム', reuse:false}
+    ];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      buildWorkerSlots();
+      renderKyChecklist();
+      bindEvents();
+      bootstrap();
+    });
+
+    /* ---------- 初期化 ---------- */
+    function buildWorkerSlots() {
+      const root = document.getElementById('workerList');
+      root.innerHTML = '';
+
+      for (let i = 0; i < WORKER_SLOTS; i++) {
+        const box = document.createElement('div');
+        box.className = 'worker';
+        box.innerHTML =
+          '<div class="wtop">' +
+            '<label class="wno" for="worker' + i + '">作業者 ' + (i + 1) + '</label>' +
+            '<select class="worker-select" id="worker' + i + '" data-index="' + i + '"><option value="">未選択</option></select>' +
+          '</div>' +
+          '<div class="chips worker-qual" data-index="' + i + '"></div>';
+        root.appendChild(box);
+      }
+    }
+
+    function bindEvents() {
+      document.getElementById('jobFilter').addEventListener('input', renderJobSelect);
+      document.getElementById('jobSelect').addEventListener('change', onJobChange);
+      document.getElementById('leaderSelect').addEventListener('change', renderLeaderInfo);
+
+      document.querySelectorAll('.worker-select').forEach(select => {
+        select.addEventListener('change', () => enforceUniqueWorkers(select));
+      });
+
+      document.querySelectorAll('input[name="repairTroubleMode"]').forEach(radio => {
+        radio.addEventListener('change', syncModeSeg);
+      });
+
+      // どの入力が変わっても準備状況を更新する
+      document.querySelector('main').addEventListener('input', refreshOutputPanel);
+      document.querySelector('main').addEventListener('change', refreshOutputPanel);
+
+      document.querySelectorAll('.doc button[data-doc]').forEach(btn => {
+        btn.addEventListener('click', () => generateDocs([btn.dataset.doc]));
+      });
+
+      document.getElementById('allBtn').addEventListener('click', () => {
+        generateDocs(Object.keys(DOCS).filter(key => !getMissing(key).length));
+      });
+    }
+
+    function bootstrap() {
+      setLoading(true, 'トラブル管理リストを読込中...');
+
+      google.script.run
+        .withSuccessHandler(result => {
+          APP.jobs = result.jobs || [];
+
+          document.getElementById('sourceInfo').textContent =
+            '読込元: ' + result.source.fileName + ' (' + APP.jobs.length + ' 件)';
+
+          renderJobSelect();
+          document.getElementById('jobSelect').disabled = false;
+          setLoading(false);
+        })
+        .withFailureHandler(showFailure)
+        .apiBootstrap();
+    }
+
+    /* ---------- ① 作業 ---------- */
+    function renderJobSelect() {
+      const select = document.getElementById('jobSelect');
+      const keyword = normalizeForSearch(valueOf('jobFilter'));
+      const current = APP.currentJobKey || select.value;
+
+      const jobs = APP.jobs.filter(job => {
+        if (!keyword) return true;
+        if (job.jobKey === current) return true;
+        return normalizeForSearch([job.no, job.machineId, job.troubleName].join(' ')).indexOf(keyword) !== -1;
+      });
+
+      select.innerHTML = '';
+
+      const first = document.createElement('option');
+      first.value = '';
+      first.textContent = jobs.length ? '選択してください (' + jobs.length + ' 件)' : '該当する作業がありません';
+      select.appendChild(first);
+
+      jobs.forEach(job => {
+        const option = document.createElement('option');
+        option.value = job.jobKey;
+        option.textContent = 'No.' + job.no + ' | ' + job.machineId + ' | ' + job.troubleName;
+        select.appendChild(option);
+      });
+
+      if (current && jobs.some(job => job.jobKey === current)) {
+        select.value = current;
+      }
+    }
+
+    function normalizeForSearch(value) {
+      const text = String(value || '');
+      return (text.normalize ? text.normalize('NFKC') : text).toLowerCase().replace(/\s+/g, '');
+    }
+
+    function onJobChange() {
+      const select = document.getElementById('jobSelect');
+      const jobKey = select.value;
+
+      if (!jobKey || jobKey === APP.currentJobKey) {
+        if (!jobKey && APP.currentJobKey) select.value = APP.currentJobKey;
+        return;
+      }
+
+      if (APP.currentJobKey &&
+          !confirm('作業を切り替えると、いま入力した内容は消えます。切り替えますか？')) {
+        select.value = APP.currentJobKey;
+        return;
+      }
+
+      loadJob(jobKey);
+    }
+
+    function loadJob(jobKey) {
+      setLoading(true, '作業データを読込中...');
+      showError('');
+
+      google.script.run
+        .withSuccessHandler(result => {
+          APP.loaded = result;
+          APP.currentJobKey = jobKey;
+
+          fillBasicFields(result.jobData);
+          fillLeaderOptions(result.leaderOptions || []);
+          rebuildWorkerOptions(false);
+          renderSimpleConsumables(result.jobData.environment);
+          renderWarning('basicWarning', result.jobData.warnings || []);
+          renderWarning('workerWarning', []);
+
+          document.querySelectorAll('input[name="repairTroubleMode"]').forEach(r => r.checked = false);
+          syncModeSeg();
+          setValue('workType', '');
+          document.querySelectorAll('.ky-check').forEach(c => c.checked = false);
+          resetDocMessages();
+
+          document.querySelectorAll('.card.locked').forEach(card => card.classList.remove('locked'));
+
+          refreshOutputPanel();
+          setLoading(false);
+          document.getElementById('sec-basic').scrollIntoView({ block: 'start' });
+        })
+        .withFailureHandler(error => {
+          document.getElementById('jobSelect').value = APP.currentJobKey || '';
+          showFailure(error);
+        })
+        .apiLoadJob(jobKey);
+    }
+
+    /* ---------- ② 共通の情報 ---------- */
+    function fillBasicFields(job) {
+      setValue('workDate', job.workDate);
+      setValue('startTime', job.startTime);
+      setValue('equipmentModel', job.equipmentModel);
+      setValue('workTitle', job.workTitle);
+      setValue('customerName', job.customerName);
+      setValue('workLocation', job.workLocation);
+      setValue('serialNo', job.serialNo);
+      setValue('oldSerial', job.oldSerial);
+
+      document.getElementById('factNo').textContent = job.troubleNo || '-';
+      document.getElementById('factMachine').textContent = job.machineId || '-';
+      document.getElementById('factBuilding').textContent = job.building || '-';
+    }
+
+    /* ---------- ③ 職長・作業者 ---------- */
+    function fillLeaderOptions(leaders) {
+      const select = document.getElementById('leaderSelect');
+      select.innerHTML = '<option value="">選択してください</option>';
+
+      leaders.forEach(leader => {
+        const option = document.createElement('option');
+        option.value = leader.leaderKey;
+        option.textContent = leader.name + (leader.qualificationResolved ? '' : ' (資格未照合)');
+        select.appendChild(option);
+      });
+
+      setValue('leaderPHS', '');
+      document.getElementById('leaderQual').textContent = '職長を選ぶと資格が表示されます';
+    }
+
+    function selectedLeader() {
+      const key = valueOf('leaderSelect');
+      return (APP.loaded?.leaderOptions || []).find(item => item.leaderKey === key);
+    }
+
+    function renderLeaderInfo() {
+      const leader = selectedLeader();
+      const phsInput = document.getElementById('leaderPHS');
+
+      if (!leader) {
+        phsInput.value = '';
+        document.getElementById('leaderQual').textContent = '職長を選ぶと資格が表示されます';
+        renderWarning('workerWarning', []);
+        rebuildWorkerOptions(true);
+        return;
+      }
+
+      const hasPhs = leader.phs && leader.phs !== '-';
+      phsInput.value = hasPhs ? leader.phs : '';
+      phsInput.placeholder = hasPhs ? 'PHS' : 'PHS を入力してください';
+
+      const notes = [];
+
+      if (leader.qualificationResolved) {
+        document.getElementById('leaderQual').innerHTML = qualificationHtml(leader.qualifications || {});
+
+        if (leader.expandedFromAmbiguous) {
+          notes.push('同じ姓の職長が複数いるため「' + leader.name + '」と表示しています。PHS が本人のものか確認してください。');
+        }
+      } else {
+        document.getElementById('leaderQual').textContent = '資格を表示できません';
+        notes.push('職長「' + leader.name + '」は名簿で確認できなかったため、資格の丸印は出力されません。');
+      }
+
+      if (!hasPhs) {
+        notes.push('PHS 番号が登録されていません。手入力してください。');
+      }
+
+      renderWarning('workerWarning', notes);
+      rebuildWorkerOptions(true);
+    }
+
+    function isSameAsLeader(leader, worker) {
+      if (!leader || !worker) return false;
+      return leader.workerKey ? leader.workerKey === worker.workerKey : leader.name === worker.name;
+    }
+
+    function rebuildWorkerOptions(preserveSelection) {
+      const leader = selectedLeader();
+      const selects = [...document.querySelectorAll('.worker-select')];
+      const previous = selects.map(select => preserveSelection ? select.value : '');
+
+      selects.forEach((select, index) => {
+        select.innerHTML = '<option value="">未選択</option>';
+
+        (APP.loaded?.workerOptions || []).forEach(worker => {
+          const option = document.createElement('option');
+          option.value = worker.workerKey;
+          option.textContent = worker.displayLabel || worker.name;
+
+          // 職長も含め全員を一覧に出す。いま職長に選んでいる本人だけ選択不可。
+          if (isSameAsLeader(leader, worker)) {
+            option.disabled = true;
+            option.textContent += '（職長に選択中）';
+          }
+
+          select.appendChild(option);
+        });
+
+        const oldValue = previous[index];
+        const stillOk = oldValue && [...select.options].some(o => o.value === oldValue && !o.disabled);
+        select.value = stillOk ? oldValue : '';
+
+        renderWorkerQual(select);
+      });
+    }
+
+    function renderWorkerQual(select) {
+      const worker = (APP.loaded?.workerOptions || []).find(item => item.workerKey === select.value);
+      const target = document.querySelector('.worker-qual[data-index="' + select.dataset.index + '"]');
+
+      target.innerHTML = worker ? qualificationHtml(worker.qualifications || {}) : '';
+    }
+
+    function qualificationHtml(q) {
+      return [
+        ['安衛法60条', q.law60],
+        ['職長', q.leader],
+        ['電気', q.electric],
+        ['ガス', q.gas]
+      ].map(([label, on]) =>
+        '<span class="chip ' + (on ? 'on' : '') + '">' + label + (on ? ' ○' : ' －') + '</span>'
+      ).join('');
+    }
+
+    function enforceUniqueWorkers(changedSelect) {
+      const value = changedSelect.value;
+
+      if (value) {
+        const duplicate = [...document.querySelectorAll('.worker-select')]
+          .some(select => select !== changedSelect && select.value === value);
+
+        if (duplicate) {
+          changedSelect.value = '';
+          alert('同じ作業者は重複して選択できません。');
+        }
+      }
+
+      renderWorkerQual(changedSelect);
+      refreshOutputPanel();
+    }
+
+    /* ---------- ④ 書類ごとの入力 ---------- */
+    function syncModeSeg() {
+      document.querySelectorAll('#modeSeg label').forEach(label => {
+        label.classList.toggle('checked', label.querySelector('input').checked);
+      });
+    }
+
+    function renderKyChecklist() {
+      const root = document.getElementById('kyChecklist');
+      root.innerHTML = '';
+
+      [...new Set(KY_ITEMS.map(item => item.group))].forEach(group => {
+        const box = document.createElement('div');
+        box.className = 'ky-group';
+
+        const title = document.createElement('div');
+        title.className = 'ky-group-title';
+        title.textContent = group;
+        box.appendChild(title);
+
+        KY_ITEMS.filter(item => item.group === group).forEach(item => {
+          const row = document.createElement('label');
+          row.className = 'ky-item';
+          row.title = '原本セル ' + item.cell;
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.className = 'ky-check';
+          checkbox.dataset.cell = item.cell;
+          checkbox.dataset.label = item.label;
+
+          const text = document.createElement('span');
+          text.textContent = item.label;
+
+          row.appendChild(checkbox);
+          row.appendChild(text);
+          box.appendChild(row);
+        });
+
+        root.appendChild(box);
+      });
+    }
+
+    function getKySelectedItems() {
+      return [...document.querySelectorAll('.ky-check:checked')]
+        .map(input => ({ cell: input.dataset.cell, label: input.dataset.label }));
+    }
+
+    function renderSimpleConsumables(environment) {
+      const root = document.getElementById('simpleConsumables');
+      const minRow = environment === 'BEVEL' ? 36 : 33;
+      const maxRow = environment === 'BEVEL' ? 42 : 39;
+
+      const table = document.createElement('table');
+      table.className = 'simple';
+      table.innerHTML = '<thead><tr><th>消耗品</th><th>対応</th></tr></thead><tbody></tbody>';
+
+      const tbody = table.querySelector('tbody');
+
+      SIMPLE_ITEMS.filter(item => item.row >= minRow && item.row <= maxRow).forEach(item => {
+        const tr = document.createElement('tr');
+
+        const name = document.createElement('td');
+        name.textContent = item.label;
+
+        const choice = document.createElement('td');
+        const select = document.createElement('select');
+        select.className = 'simple-choice';
+        select.dataset.row = String(item.row);
+        select.dataset.label = item.label;
+        select.title = '原本セル B' + item.row;
+        select.setAttribute('aria-label', item.label + ' の対応');
+
+        const options = ['未選択', '取り外し無し', '新品交換'];
+        if (item.reuse) options.push('再利用');
+
+        options.forEach(value => {
+          const option = document.createElement('option');
+          option.value = value === '未選択' ? '' : value;
+          option.textContent = value;
+          select.appendChild(option);
+        });
+
+        choice.appendChild(select);
+        tr.appendChild(name);
+        tr.appendChild(choice);
+        tbody.appendChild(tr);
+      });
+
+      root.innerHTML = '';
+      root.appendChild(table);
+    }
+
+    function getSimpleSelections() {
+      return [...document.querySelectorAll('.simple-choice')]
+        .map(select => ({ row: select.dataset.row, label: select.dataset.label, value: select.value }));
+    }
+
+    /* ---------- サーバーへ送る入力 (v0.6.6 と同じ形) ---------- */
+    function collectDraftInput() {
+      const kyChecks = {};
+      getKySelectedItems().forEach(item => { kyChecks[item.cell] = true; });
+
+      const simpleConsumables = {};
+      getSimpleSelections().forEach(item => {
+        if (item.value) simpleConsumables['B' + item.row] = item.value;
+      });
+
+      return {
+        jobKey: APP.currentJobKey,
+        workDate: valueOf('workDate').trim(),
+        startTime: valueOf('startTime').trim(),
+        repairTroubleMode:
+          document.querySelector('input[name="repairTroubleMode"]:checked')?.value || '',
+        leaderKey: valueOf('leaderSelect'),
+        leaderPHS: valueOf('leaderPHS').trim(),
+        workerKeys: [...document.querySelectorAll('.worker-select')]
+          .map(select => select.value)
+          .filter(Boolean),
+        equipmentModel: valueOf('equipmentModel'),
+        workTitle: valueOf('workTitle'),
+        customerName: valueOf('customerName'),
+        workLocation: valueOf('workLocation'),
+        serialNo: valueOf('serialNo'),
+        oldSerial: valueOf('oldSerial'),
+        workType: valueOf('workType'),
+        kyChecks: kyChecks,
+        simpleConsumables: simpleConsumables
+      };
+    }
+
+    /* ---------- 出力パネル ---------- */
+    // 不足項目 = [表示文, 移動先の要素 id]
+    function commonMissing(input) {
+      const missing = [];
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(input.workDate)) missing.push(['作業日', 'workDate']);
+      if (!/^\d{2}:\d{2}$/.test(input.startTime)) missing.push(['開始時刻 (例 10:00)', 'startTime']);
+      if (!input.workTitle.trim()) missing.push(['作業名', 'workTitle']);
+      if (!input.leaderKey) missing.push(['職長', 'leaderSelect']);
+      if (!input.leaderPHS || input.leaderPHS === '-') missing.push(['職長 PHS', 'leaderPHS']);
+      return missing;
+    }
+
+    const DOCS = {
+      emerg: {
+        loading: '突発作業チェックシートを作成中... (20〜40秒ほど)',
+        missing: input => {
+          const missing = commonMissing(input);
+          if (!input.repairTroubleMode) missing.push(['修理 / トラブル の選択', 'modeSeg']);
+          return missing;
+        }
+      },
+      worker: {
+        loading: '作業者名簿台帳を作成中... (10〜20秒ほど)',
+        missing: input => {
+          const missing = commonMissing(input);
+          if (!input.workerKeys.length) missing.push(['作業者 (1 名以上)', 'worker0']);
+          return missing;
+        }
+      }
+    };
+
+    function getMissing(docKey) {
+      if (!APP.currentJobKey || !APP.loaded) return [['作業を選ぶ', 'jobSelect']];
+      return DOCS[docKey].missing(collectDraftInput());
+    }
+
+    function refreshOutputPanel() {
+      const loaded = Boolean(APP.currentJobKey && APP.loaded);
+      let readyCount = 0;
+
+      Object.keys(DOCS).forEach(docKey => {
+        const card = document.getElementById('doc-' + docKey);
+        const missing = getMissing(docKey);
+        const list = card.querySelector('.missing');
+        const button = card.querySelector('button[data-doc]');
+        const pill = card.querySelector('.pill');
+
+        // 内容が同じなら作り直さない (入力欄からフォーカスが外れた瞬間に押したボタンが消えるのを防ぐ)
+        const signature = loaded ? missing.map(item => item[1]).join('|') : '';
+        const unchanged = list.dataset.sig === signature;
+
+        if (!unchanged) {
+          list.innerHTML = '';
+          list.dataset.sig = signature;
+        }
+
+        if (loaded && !unchanged) {
+          missing.forEach(([text, targetId]) => {
+            const li = document.createElement('li');
+            const jump = document.createElement('button');
+            jump.type = 'button';
+            jump.textContent = text;
+            jump.addEventListener('click', () => jumpTo(targetId));
+            li.appendChild(jump);
+            list.appendChild(li);
+          });
+        }
+
+        const ready = loaded && !missing.length;
+        if (ready) readyCount++;
+        if (!ready) card.classList.remove('done');
+
+        const done = card.classList.contains('done');
+
+        card.classList.toggle('ready', ready && !done);
+        card.classList.toggle('todo', loaded && !ready);
+
+        pill.textContent = !loaded ? '未入力'
+          : !ready ? 'あと ' + missing.length + ' 項目'
+          : done ? '作成済み'
+          : '作成できます';
+
+        button.disabled = !ready || APP.busy;
+        button.textContent = done ? 'もう一度作成する' : '作成する';
+      });
+
+      const allBtn = document.getElementById('allBtn');
+      allBtn.disabled = readyCount === 0 || APP.busy;
+      allBtn.textContent = readyCount
+        ? '準備できた書類をまとめて作成 (' + readyCount + ' 件)'
+        : '準備できた書類をまとめて作成';
+
+      document.getElementById('sideNote').textContent = loaded
+        ? '黄色の項目を押すと、その入力欄へ移動します。'
+        : '作業を選ぶと、ここに準備状況が表示されます。';
+    }
+
+    function jumpTo(targetId) {
+      const target = document.getElementById(targetId);
+      if (!target) return;
+
+      const details = target.closest('details');
+      if (details) details.open = true;
+
+      target.scrollIntoView({ block: 'center' });
+
+      const focusable = target.matches('input, select, button') ? target : target.querySelector('input, select');
+      if (focusable) focusable.focus({ preventScroll: true });
+
+      target.classList.remove('flash');
+      void target.offsetWidth;
+      target.classList.add('flash');
+    }
+
+    function resetDocMessages() {
+      Object.keys(DOCS).forEach(docKey => {
+        document.getElementById('doc-' + docKey).classList.remove('done');
+        setDocMessage(docKey, '', false);
+      });
+    }
+
+    function setDocMessage(docKey, html, isError) {
+      const box = document.querySelector('#doc-' + docKey + ' > .doc-msg');
+      box.innerHTML = html;
+      box.classList.toggle('err', Boolean(isError));
+    }
+
+    /* ---------- 作成 ---------- */
+    function generateDocs(docKeys) {
+      const queue = docKeys.filter(key => DOCS[key] && !getMissing(key).length);
+
+      if (!queue.length || APP.busy) return;
+
+      APP.busy = true;
+      refreshOutputPanel();
+
+      const input = collectDraftInput();
+
+      const next = () => {
+        const docKey = queue.shift();
+
+        if (!docKey) {
+          APP.busy = false;
+          setLoading(false);
+          refreshOutputPanel();
+          return;
+        }
+
+        setLoading(true, DOCS[docKey].loading);
+        runGenerate(docKey, input, result => {
+          renderDocResult(docKey, result);
+          next();
+        });
+      };
+
+      next();
+    }
+
+    function runGenerate(docKey, input, done) {
+      const fail = error => done({ ok: false, error: error && error.message ? error.message : String(error) });
+
+      if (docKey === 'worker') {
+        google.script.run
+          .withSuccessHandler(result => done(result || { ok: false, error: '結果を受け取れませんでした。' }))
+          .withFailureHandler(fail)
+          .apiGenerateWorkerLedgerPreview(input);
+        return;
+      }
+
+      // 突発作業: サーバー関数が async のため、戻り値が届かない場合は結果を取りに行く
+      const requestId = 'R' + Date.now() + Math.random().toString(36).slice(2, 8);
+
+      google.script.run
+        .withSuccessHandler(result => {
+          if (result && result.ok) {
+            done(result);
+          } else {
+            pollEmergPreview(requestId, 0, done);
+          }
+        })
+        .withFailureHandler(fail)
+        .apiGenerateEmergPreview(input, requestId);
+    }
+
+    function pollEmergPreview(requestId, count, done) {
+      google.script.run
+        .withSuccessHandler(result => {
+          if (result && result.pending && count < 20) {
+            setTimeout(() => pollEmergPreview(requestId, count + 1, done), 3000);
+            return;
+          }
+
+          done(result && result.pending
+            ? { ok: false, error: '時間内に結果を受け取れませんでした。Box のテスト用フォルダを確認してください。' }
+            : result);
+        })
+        .withFailureHandler(error => done({ ok: false, error: error && error.message ? error.message : String(error) }))
+        .apiGetEmergPreviewResult(requestId);
+    }
+
+    function renderDocResult(docKey, result) {
+      const card = document.getElementById('doc-' + docKey);
+
+      if (!result || !result.ok) {
+        card.classList.remove('done');
+        setDocMessage(docKey, '作成できませんでした。<br>' + escapeText(result && result.error || ''), true);
+        return;
+      }
+
+      card.classList.add('done');
+
+      const warnings = (result.warnings || []).length
+        ? '<small>注意: ' + result.warnings.map(escapeText).join(' / ') + '</small>'
+        : '';
+
+      setDocMessage(
+        docKey,
+        '<a href="' + escapeText(result.boxUrl) + '" target="_blank" rel="noopener">Box で開く: ' + escapeText(result.fileName) + '</a>' +
+        '<small>' + (result.uploadMode === 'NEW_VERSION' ? '同じファイルの新しい版として保存しました。' : '新しいファイルとして保存しました。') + '</small>' +
+        warnings,
+        false
+      );
+    }
+
+    /* ---------- 共通 ---------- */
+    function renderWarning(id, warnings) {
+      const box = document.getElementById(id);
+      const list = warnings || [];
+
+      box.textContent = list.map(w => '・' + w).join('\n');
+      box.classList.toggle('show', list.length > 0);
+    }
+
+    function escapeText(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function setLoading(show, text) {
+      document.getElementById('loadingText').textContent = text || '読込中...';
+      document.getElementById('loading').classList.toggle('show', Boolean(show));
+    }
+
+    function showError(message) {
+      const bar = document.getElementById('errorBar');
+      bar.textContent = message || '';
+      bar.classList.toggle('show', Boolean(message));
+    }
+
+    function showFailure(error) {
+      setLoading(false);
+      showError('エラー: ' + (error && error.message ? error.message : String(error)));
+      window.scrollTo(0, 0);
+    }
+
+    function setValue(id, value) {
+      document.getElementById(id).value = value || '';
+    }
+
+    function valueOf(id) {
+      return document.getElementById(id).value || '';
+    }
+  </script>
+</body>
+</html>
