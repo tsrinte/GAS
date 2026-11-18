@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>작업 체크리스트 Web App 샘플</title>
+<style>
+:root{--bg:#f5f7fa;--card:#fff;--line:#d9dee7;--text:#1f2937;--muted:#6b7280;--auto:#fff4b8;--manual:#dff3ff;--danger:#fff0f0}
+*{box-sizing:border-box} body{margin:0;font-family:Arial,"Noto Sans KR","Noto Sans JP",sans-serif;background:var(--bg);color:var(--text)}
+.app{max-width:1280px;margin:0 auto;padding:24px}.topbar{display:flex;justify-content:space-between;gap:16px;margin-bottom:18px}.title h1{margin:0 0 6px;font-size:24px}.title p{margin:0;color:var(--muted);font-size:14px}
+.status{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;min-width:220px}.progress{margin-top:8px;height:8px;background:#e9edf3;border-radius:999px;overflow:hidden}.bar{height:100%;width:58%;background:#4b5563}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.tab{border:1px solid var(--line);background:var(--card);padding:10px 14px;border-radius:10px;cursor:pointer}.tab.active{background:#1f2937;color:#fff;border-color:#1f2937}
+.panel{display:none}.panel.active{display:block}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.card h2{font-size:18px;margin:0 0 14px}.field{display:grid;grid-template-columns:150px 1fr auto;gap:10px;align-items:center;margin-bottom:10px}.field label{font-size:14px}
+input[type=text],input[type=date],select,textarea{width:100%;padding:9px 10px;border:1px solid #cfd6df;border-radius:8px;background:#fff;font-size:14px}textarea{min-height:80px;resize:vertical}.auto input,.auto select{background:var(--auto)}
+.badge{font-size:12px;padding:5px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}.badge.auto{background:var(--auto)}.badge.manual{background:var(--manual)}
+.hint{background:#f0f5ff;border:1px solid #d5e0f5;border-radius:10px;padding:12px;font-size:13px;color:#4b5563;margin-bottom:14px}.section{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px}
+.section-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#f8fafc;cursor:pointer;font-weight:700}.section-body{padding:14px}.check-row{display:grid;grid-template-columns:1fr auto;gap:18px;padding:12px 0;border-bottom:1px dashed #d7dde5}.check-row:last-child{border-bottom:none}.check-title{font-size:14px;line-height:1.5}.radios{display:flex;gap:10px;white-space:nowrap;align-items:center}.radios label{font-size:13px}.irregular{margin-top:10px;background:var(--danger);border:1px solid #efcaca;padding:12px;border-radius:10px;display:none}
+.footer-actions{display:flex;justify-content:space-between;gap:12px;margin-top:18px;flex-wrap:wrap}button{padding:10px 14px;border-radius:9px;border:1px solid #c9d0da;background:#fff;cursor:pointer;font-weight:700}.primary{background:#1f2937;color:#fff;border-color:#1f2937}.preview{height:420px;border:1px dashed #aeb7c4;border-radius:12px;background:linear-gradient(135deg,#fafafa,#f2f4f7);display:flex;align-items:center;justify-content:center;color:#6b7280;text-align:center;padding:24px}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.summary .box{border:1px solid var(--line);background:#fff;border-radius:10px;padding:12px}.summary .num{font-size:20px;font-weight:700}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.field{grid-template-columns:1fr}.check-row{grid-template-columns:1fr}.summary{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="title"><h1>작업 체크리스트 작성</h1><p>자동입력 + 작업자 확인 + 예외입력 + PDF 확인 흐름 샘플</p></div>
+    <div class="status"><div>진행률 <strong>7 / 12</strong></div><div class="progress"><div class="bar"></div></div></div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="basic">기본정보</button>
+    <button class="tab" data-tab="gas">가스 라인</button>
+    <button class="tab" data-tab="chemical">약액 라인</button>
+    <button class="tab" data-tab="electric">전기 계통</button>
+    <button class="tab" data-tab="final">최종 확인</button>
+  </div>
+
+  <section class="panel active" id="basic">
+    <div class="grid">
+      <div class="card"><h2>1. 자동입력 정보</h2><div class="hint">노란색 영역은 고객 첨부파일 또는 Master에서 자동 취득한 값을 표시하는 예시입니다.</div>
+        <div class="field auto"><label>작업일</label><input type="date" value="2026-09-22"><span class="badge auto">AUTO</span></div>
+        <div class="field auto"><label>장치명</label><input type="text" value="K706"><span class="badge auto">AUTO</span></div>
+        <div class="field auto"><label>장치 ID</label><input type="text" value="OFXC701"><span class="badge auto">AUTO</span></div>
+        <div class="field auto"><label>작업명</label><input type="text" value="CL1A Roller 정기점검"><span class="badge auto">AUTO</span></div>
+        <div class="field"><label>작업자</label><select><option>山田 太郎</option><option>佐藤 次郎</option></select><span class="badge manual">선택</span></div>
+        <div class="footer-actions"><button>자동값 다시 불러오기</button><button class="primary" onclick="goTab('gas')">다음: 가스 라인</button></div>
+      </div>
+      <div class="card"><h2>자동입력 원본 정보</h2>
+        <div class="field"><label>고객 첨부파일</label><input type="text" value="EFTトラブル管理リストRev5.10_20260922.xlsm" readonly><span class="badge">BOX</span></div>
+        <div class="field"><label>참조 No.</label><input type="text" value="1258" readonly><span class="badge">DATA</span></div>
+        <div class="field"><label>원본 확인</label><input type="text" value="장치명 / 장치ID / 작업명 자동취득 완료" readonly><span class="badge">OK</span></div>
+        <div class="hint">실제 GAS에서는 고객 Excel → 공통 FieldKey → 작업시트 Mapping으로 전달합니다.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="gas"><div class="card"><h2>2. 가스 라인 안전 확인</h2><div class="hint">파란색 영역을 HTML에서 작업자가 직접 확인하는 예시입니다.</div>
+    <div class="section"><div class="section-head" onclick="toggleSection(this)"><span>가스 라인의 트러블 및 실제 가스 투입/배관 절단 작업</span><span>4항목</span></div><div class="section-body">
+      <div class="check-row"><div class="check-title">① 가스 종류 및 작업 대상 라인을 확인했는가?</div><div class="radios"><label><input type="radio" name="g1" checked> OK</label><label><input type="radio" name="g1"> NG</label><label><input type="radio" name="g1"> N/A</label></div></div>
+      <div class="check-row"><div class="check-title">② 1차/2차 밸브의 닫힘 상태를 확인했는가?</div><div class="radios"><label><input type="radio" name="g2" checked> OK</label><label><input type="radio" name="g2"> NG</label><label><input type="radio" name="g2"> N/A</label></div></div>
+      <div class="check-row"><div class="check-title">③ 작업 전후 누설 여부를 확인했는가?</div><div><div class="radios"><label><input type="radio" name="g3" onclick="toggleIrregular(false)"> OK</label><label><input type="radio" name="g3" onclick="toggleIrregular(true)"> NG</label><label><input type="radio" name="g3" onclick="toggleIrregular(false)"> N/A</label></div><div class="irregular" id="gasIrregular"><strong>예외 내용 입력</strong><textarea placeholder="NG 사유 / 이상 내용 / 응급조치 내용을 입력"></textarea><div class="field" style="margin-top:10px"><label>책임자 보고</label><select><option>선택</option><option>보고 완료</option><option>미보고</option></select><span class="badge manual">필수</span></div></div></div></div>
+      <div class="check-row"><div class="check-title">④ 보호구 착용 및 작업구역 통제를 확인했는가?</div><div class="radios"><label><input type="radio" name="g4"> OK</label><label><input type="radio" name="g4"> NG</label><label><input type="radio" name="g4"> N/A</label></div></div>
+    </div></div><div class="footer-actions"><button onclick="goTab('basic')">이전</button><button class="primary" onclick="goTab('chemical')">다음: 약액 라인</button></div></div></section>
+
+  <section class="panel" id="chemical"><div class="card"><h2>3. 약액 라인 안전 확인</h2><div class="section"><div class="section-head" onclick="toggleSection(this)"><span>약액 라인의 트러블 및 약액 투입/배관 절단 작업</span><span>4항목</span></div><div class="section-body">
+    <div class="check-row"><div class="check-title">① 약액 종류 및 대상 배관을 확인했는가?</div><div class="radios"><label><input type="radio" name="c1" checked> OK</label><label><input type="radio" name="c1"> NG</label><label><input type="radio" name="c1"> N/A</label></div></div>
+    <div class="check-row"><div class="check-title">② 보호구(PPE)를 확인했는가?</div><div class="radios"><label><input type="radio" name="c2"> OK</label><label><input type="radio" name="c2"> NG</label><label><input type="radio" name="c2"> N/A</label></div></div>
+    <div class="check-row"><div class="check-title">③ 배관 잔압/잔액 제거를 확인했는가?</div><div class="radios"><label><input type="radio" name="c3"> OK</label><label><input type="radio" name="c3"> NG</label><label><input type="radio" name="c3"> N/A</label></div></div>
+    <div class="check-row"><div class="check-title">④ 작업 후 누액 여부를 확인했는가?</div><div class="radios"><label><input type="radio" name="c4"> OK</label><label><input type="radio" name="c4"> NG</label><label><input type="radio" name="c4"> N/A</label></div></div>
+  </div></div><div class="footer-actions"><button onclick="goTab('gas')">이전</button><button class="primary" onclick="goTab('electric')">다음: 전기 계통</button></div></div></section>
+
+  <section class="panel" id="electric"><div class="card"><h2>4. 전기 계통 안전 확인</h2><div class="section"><div class="section-head"><span>전기 계통 트러블 및 통전 작업</span><span>3항목</span></div><div class="section-body">
+    <div class="check-row"><div class="check-title">① 전원 OFF 및 차단 상태를 확인했는가?</div><div class="radios"><label><input type="radio" name="e1"> OK</label><label><input type="radio" name="e1"> NG</label><label><input type="radio" name="e1"> N/A</label></div></div>
+    <div class="check-row"><div class="check-title">② LOTO 또는 오투입 방지 조치를 확인했는가?</div><div class="radios"><label><input type="radio" name="e2"> OK</label><label><input type="radio" name="e2"> NG</label><label><input type="radio" name="e2"> N/A</label></div></div>
+    <div class="check-row"><div class="check-title">③ 작업 후 전원 복구 및 이상 유무를 확인했는가?</div><div class="radios"><label><input type="radio" name="e3"> OK</label><label><input type="radio" name="e3"> NG</label><label><input type="radio" name="e3"> N/A</label></div></div>
+  </div></div><div class="footer-actions"><button onclick="goTab('chemical')">이전</button><button class="primary" onclick="goTab('final')">최종 확인</button></div></div></section>
+
+  <section class="panel" id="final"><div class="summary"><div class="box"><div>자동입력</div><div class="num">4</div><small>완료</small></div><div class="box"><div>체크항목</div><div class="num">12</div><small>전체</small></div><div class="box"><div>미확인</div><div class="num">5</div><small>확인 필요</small></div><div class="box"><div>NG</div><div class="num">0</div><small>현재</small></div></div>
+    <div class="grid"><div class="card"><h2>5. 최종 확인</h2><div class="field"><label>작업자 최종 확인</label><select><option>미확인</option><option>확인 완료</option></select><span class="badge manual">필수</span></div><div class="field"><label>비고</label><textarea placeholder="특이사항이 있는 경우 입력"></textarea><span class="badge">선택</span></div><h3>출력 대상</h3><label><input type="checkbox" checked> 작업 체크리스트 Excel 반영</label><br><br><label><input type="checkbox" checked> 작업 체크리스트 PDF 생성</label><br><br><label><input type="checkbox"> 기존 PDF 병합 Web App으로 전달</label><div class="footer-actions"><button onclick="goTab('electric')">이전</button><div><button onclick="alert('샘플: 임시저장')">임시저장</button> <button class="primary" onclick="alert('샘플: 입력 검증 → Excel 반영 → PDF 생성')">서류 생성</button></div></div></div>
+    <div class="card"><h2>PDF Preview 영역</h2><div class="preview">실제 구현 시<br><br>Excel Template 반영 → PDF 생성 후<br>이 영역에 PDF Viewer로 표시<br><br>[수정으로 돌아가기] / [확정] 버튼 배치</div></div></div>
+  </section>
+</div>
+<script>
+function goTab(id){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelector('.tab[data-tab="'+id+'"]').classList.add('active');document.getElementById(id).classList.add('active');window.scrollTo({top:0,behavior:'smooth'});}
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>goTab(btn.dataset.tab)));
+function toggleSection(head){const body=head.nextElementSibling;body.style.display=body.style.display==='none'?'block':'none';}
+function toggleIrregular(show){document.getElementById('gasIrregular').style.display=show?'block':'none';}
+</script>
+</body>
+</html>

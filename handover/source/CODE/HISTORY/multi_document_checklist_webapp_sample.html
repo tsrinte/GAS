@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>작업서류 자동화 Web App - 다중문서 샘플</title>
+<style>
+:root{--bg:#f4f6f8;--panel:#fff;--line:#d9dee5;--text:#20242a;--muted:#667085;--auto:#fff6b8;--human:#dff3ff;--ok:#eaf7ee;--warn:#fff2d8;--ng:#fde8e8;--nav:#1f2937}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,"Noto Sans KR","Noto Sans JP",sans-serif;color:var(--text)}
+.app{max-width:1440px;margin:0 auto;padding:18px}header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
+h1{font-size:23px;margin:0 0 6px}.sub{color:var(--muted);font-size:13px}.topstatus{display:flex;gap:10px;flex-wrap:wrap}.stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:120px}.stat .n{font-size:20px;font-weight:700}
+.layout{display:grid;grid-template-columns:300px 1fr;gap:14px}.side,.main{background:#fff;border:1px solid var(--line);border-radius:14px}.side{padding:14px;align-self:start;position:sticky;top:12px}.main{padding:18px}.side h2,.main h2{font-size:17px;margin:0 0 12px}
+.job{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:14px}.jobline{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:13px}.badge{font-size:11px;padding:4px 7px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}.auto{background:var(--auto)}.human{background:var(--human)}.ok{background:var(--ok)}.warn{background:var(--warn)}.ng{background:var(--ng)}
+.docnav{display:flex;flex-direction:column;gap:7px}.docbtn{width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px;cursor:pointer}.docbtn.active{background:var(--nav);color:#fff;border-color:var(--nav)}.docbtn .row{display:flex;justify-content:space-between;gap:8px;align-items:center}.docbtn small{display:block;color:var(--muted);margin-top:5px}.docbtn.active small{color:#d1d5db}.progress{height:7px;background:#edf0f3;border-radius:999px;overflow:hidden;margin-top:7px}.progress>div{height:100%;background:#475569}
+.toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap}.toolbar .actions{display:flex;gap:8px;flex-wrap:wrap}button{border:1px solid #cfd5dc;background:#fff;border-radius:9px;padding:9px 12px;cursor:pointer;font-weight:600}button.primary{background:#1f2937;color:#fff;border-color:#1f2937}button.soft{background:#f8fafc}
+.section{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}.sectionhead{display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:12px 14px;font-weight:700;cursor:pointer}.sectionbody{padding:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:grid;grid-template-columns:140px 1fr auto;gap:10px;align-items:center;margin-bottom:9px}.field label{font-size:13px}input,select,textarea{width:100%;padding:9px 10px;border:1px solid #cfd6df;border-radius:8px;font-size:13px;background:#fff}textarea{min-height:78px;resize:vertical}.autofield input,.autofield select{background:var(--auto)}
+.check{display:grid;grid-template-columns:1fr auto;gap:16px;padding:11px 0;border-bottom:1px dashed #d7dce2}.check:last-child{border-bottom:none}.check .txt{font-size:13px;line-height:1.45}.radios{display:flex;gap:10px;white-space:nowrap}.radios label{font-size:12px}.exception{display:none;background:var(--ng);border:1px solid #efcaca;border-radius:9px;padding:10px;margin-top:8px}
+.docsummary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.box{border:1px solid var(--line);border-radius:10px;padding:11px;background:#fff}.box b{font-size:19px}.preview{height:380px;border:1px dashed #aeb6c2;border-radius:12px;background:#fafbfc;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);padding:20px}.hidden{display:none!important}footer{margin-top:14px;color:var(--muted);font-size:12px}
+@media(max-width:980px){.layout{grid-template-columns:1fr}.side{position:static}.grid2{grid-template-columns:1fr}.docsummary{grid-template-columns:1fr 1fr}.field{grid-template-columns:1fr}.check{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div><h1>작업서류 자동화 시스템</h1><div class="sub">8개 Excel Template을 하나의 작업 단위에서 자동/반자동으로 처리하는 UI 예시</div></div>
+  <div class="topstatus"><div class="stat"><div>필요문서</div><div class="n">4 / 8</div></div><div class="stat"><div>전체진행</div><div class="n">68%</div></div><div class="stat"><div>미확인</div><div class="n">7</div></div></div>
+</header>
+<div class="layout">
+<aside class="side">
+  <h2>작업 정보</h2>
+  <div class="job">
+    <div class="jobline"><span>작업 No.</span><b>#1258</b></div><div class="jobline"><span>장치</span><b>K706</b></div><div class="jobline"><span>장치 ID</span><b>OFXC701</b></div><div class="jobline"><span>작업명</span><b>CL1A Roller 정기점검</b></div><div class="jobline"><span>작업일</span><b>2026/09/22</b></div><div class="jobline"><span>원본</span><span class="badge auto">고객 Excel</span></div>
+  </div>
+  <h2>이번 작업 문서</h2>
+  <div class="docnav">
+    <button class="docbtn active" data-doc="overview"><div class="row"><b>0. 작업 개요</b><span class="badge ok">완료</span></div><small>공통정보 및 적용문서 판정</small></button>
+    <button class="docbtn" data-doc="commonKY"><div class="row"><b>1. 공통 KY</b><span class="badge warn">12/15</span></div><div class="progress"><div style="width:80%"></div></div><small>AUTO + HUMAN</small></button>
+    <button class="docbtn" data-doc="machineKY"><div class="row"><b>2. K706 전용 KY</b><span class="badge ok">8/8</span></div><div class="progress"><div style="width:100%"></div></div><small>장치조건으로 자동선택</small></button>
+    <button class="docbtn" data-doc="report"><div class="row"><b>3. 간이 Report</b><span class="badge warn">미완료</span></div><div class="progress"><div style="width:60%"></div></div><small>AUTO + TEXT 입력</small></button>
+    <button class="docbtn" data-doc="worker"><div class="row"><b>4. 작업자 확인</b><span class="badge ok">완료</span></div><small>작업자 Master 참조</small></button>
+    <button class="docbtn" disabled><div class="row"><b>5. KY Type-B</b><span class="badge">대상외</span></div><small>K706 작업에는 미적용</small></button>
+    <button class="docbtn" disabled><div class="row"><b>6. KY Type-C</b><span class="badge">대상외</span></div><small>K706 작업에는 미적용</small></button>
+    <button class="docbtn" data-doc="final"><div class="row"><b>7. 최종확인</b><span class="badge warn">대기</span></div><small>Excel 반영 / PDF 생성</small></button>
+  </div>
+</aside>
+<main class="main">
+<section class="docpanel" id="overview">
+  <div class="toolbar"><div><h2>0. 작업 개요 / 공통정보</h2><div class="sub">고객 첨부파일에서 취득한 값과 작업자 선택값을 한 번만 관리합니다.</div></div><div class="actions"><button class="soft">고객 데이터 다시 읽기</button><button class="primary" onclick="showDoc('commonKY')">다음</button></div></div>
+  <div class="grid2">
+    <div class="section"><div class="sectionhead"><span>자동취득 정보</span><span class="badge auto">AUTO</span></div><div class="sectionbody">
+      <div class="field autofield"><label>작업일</label><input value="2026/09/22"><span class="badge auto">AUTO</span></div><div class="field autofield"><label>장치명</label><input value="K706"><span class="badge auto">AUTO</span></div><div class="field autofield"><label>장치 ID</label><input value="OFXC701"><span class="badge auto">AUTO</span></div><div class="field autofield"><label>작업명</label><input value="CL1A Roller 정기점검"><span class="badge auto">AUTO</span></div><div class="field autofield"><label>고객명</label><input value="Sample Customer"><span class="badge auto">AUTO</span></div>
+    </div></div>
+    <div class="section"><div class="sectionhead"><span>사용자 확인 정보</span><span class="badge human">HUMAN</span></div><div class="sectionbody">
+      <div class="field"><label>작업자</label><select><option>山田 太郎</option><option>佐藤 次郎</option></select><span class="badge human">선택</span></div><div class="field"><label>책임자</label><select><option>田中 課長</option><option>鈴木 係長</option></select><span class="badge human">선택</span></div><div class="field"><label>작업장소</label><select><option>Building 1</option><option>Building 2</option></select><span class="badge human">선택</span></div><div class="field"><label>예외작업</label><select><option>없음</option><option>있음</option></select><span class="badge human">확인</span></div>
+    </div></div>
+  </div>
+  <div class="section"><div class="sectionhead"><span>문서 자동 판정 결과</span><span>4개 적용 / 4개 제외</span></div><div class="sectionbody"><div class="docsummary"><div class="box"><span>공통 KY</span><br><b>적용</b><br><small>K706 공통 작업</small></div><div class="box"><span>장치별 KY</span><br><b>Type-A</b><br><small>K706 규칙</small></div><div class="box"><span>간이 Report</span><br><b>적용</b><br><small>정기점검 규칙</small></div><div class="box"><span>작업자 확인</span><br><b>적용</b><br><small>Master 연동</small></div></div></div></div>
+</section>
+<section class="docpanel hidden" id="commonKY">
+  <div class="toolbar"><div><h2>1. 공통 KY / 작업내용 사전·사후 확인</h2><div class="sub">Excel의 파란 확인영역만 작업하기 편한 UI로 재구성합니다.</div></div><div class="actions"><button onclick="showOnlyUnchecked()">미확인만 보기</button><button class="primary" onclick="showDoc('machineKY')">다음 문서</button></div></div>
+  <div class="section"><div class="sectionhead"><span>가스 라인 작업</span><span class="badge warn">3/4</span></div><div class="sectionbody">
+    <div class="check done"><div class="txt">가스 종류 및 대상 라인을 확인했는가?</div><div class="radios"><label><input type="radio" name="a1" checked> OK</label><label><input type="radio" name="a1"> NG</label><label><input type="radio" name="a1"> N/A</label></div></div>
+    <div class="check done"><div class="txt">1차/2차 밸브의 닫힘 상태를 확인했는가?</div><div class="radios"><label><input type="radio" name="a2" checked> OK</label><label><input type="radio" name="a2"> NG</label><label><input type="radio" name="a2"> N/A</label></div></div>
+    <div class="check"><div class="txt">작업 전후 누설 여부를 확인했는가?</div><div><div class="radios"><label><input type="radio" name="a3" onclick="ex('ex1',false)"> OK</label><label><input type="radio" name="a3" onclick="ex('ex1',true)"> NG</label><label><input type="radio" name="a3" onclick="ex('ex1',false)"> N/A</label></div><div class="exception" id="ex1"><b>NG 상세</b><textarea placeholder="이상 내용 / 응급조치 / 보고내용"></textarea></div></div></div>
+    <div class="check done"><div class="txt">보호구 및 작업구역 통제를 확인했는가?</div><div class="radios"><label><input type="radio" name="a4" checked> OK</label><label><input type="radio" name="a4"> NG</label><label><input type="radio" name="a4"> N/A</label></div></div>
+  </div></div>
+  <div class="section"><div class="sectionhead"><span>약액 라인 작업</span><span class="badge warn">4/5</span></div><div class="sectionbody">
+    <div class="check done"><div class="txt">약액 종류와 대상 배관을 확인했는가?</div><div class="radios"><label><input type="radio" name="b1" checked> OK</label><label><input type="radio" name="b1"> NG</label><label><input type="radio" name="b1"> N/A</label></div></div>
+    <div class="check done"><div class="txt">배관 잔압·잔액 제거를 확인했는가?</div><div class="radios"><label><input type="radio" name="b2" checked> OK</label><label><input type="radio" name="b2"> NG</label><label><input type="radio" name="b2"> N/A</label></div></div>
+    <div class="check"><div class="txt">작업 후 누액 여부를 확인했는가?</div><div class="radios"><label><input type="radio" name="b3"> OK</label><label><input type="radio" name="b3"> NG</label><label><input type="radio" name="b3"> N/A</label></div></div>
+  </div></div>
+</section>
+<section class="docpanel hidden" id="machineKY">
+  <div class="toolbar"><div><h2>2. K706 전용 KY</h2><div class="sub">장치명/작업종류로 Type-A 템플릿을 자동 선택한 예시입니다.</div></div><button class="primary" onclick="showDoc('report')">다음 문서</button></div>
+  <div class="section"><div class="sectionhead"><span>위험요인 / 예방대책</span><span class="badge ok">8/8 완료</span></div><div class="sectionbody">
+    <div class="check done"><div class="txt">현장 정리정돈 및 주변 장애물을 확인</div><div class="radios"><label><input type="radio" checked> OK</label><label><input type="radio"> NG</label><label><input type="radio"> N/A</label></div></div>
+    <div class="check done"><div class="txt">적정 공구 사용 및 낙하방지 조치를 확인</div><div class="radios"><label><input type="radio" checked> OK</label><label><input type="radio"> NG</label><label><input type="radio"> N/A</label></div></div>
+    <div class="check done"><div class="txt">보호구 착용상태 확인</div><div class="radios"><label><input type="radio" checked> OK</label><label><input type="radio"> NG</label><label><input type="radio"> N/A</label></div></div>
+  </div></div>
+  <div class="section"><div class="sectionhead"><span>프로세스 소모품</span><span class="badge human">확인</span></div><div class="sectionbody">
+    <div class="field"><label>Pad</label><select><option>미교환</option><option>교환</option><option>해당없음</option></select><span class="badge human">HUMAN</span></div><div class="field"><label>Retainer</label><select><option>미교환</option><option>교환</option><option>해당없음</option></select><span class="badge human">HUMAN</span></div><div class="field"><label>Conditioner</label><select><option>해당없음</option><option>교환</option><option>미교환</option></select><span class="badge human">HUMAN</span></div>
+  </div></div>
+</section>
+<section class="docpanel hidden" id="report">
+  <div class="toolbar"><div><h2>3. 간이 Report</h2><div class="sub">기본정보는 자동, 처치내용/인계사항만 입력합니다.</div></div><button class="primary" onclick="showDoc('worker')">다음 문서</button></div>
+  <div class="grid2">
+    <div class="section"><div class="sectionhead"><span>자동입력</span><span class="badge auto">AUTO</span></div><div class="sectionbody"><div class="field autofield"><label>장치 ID</label><input value="OFXC701"><span class="badge auto">AUTO</span></div><div class="field autofield"><label>작업일</label><input value="2026/09/22"><span class="badge auto">AUTO</span></div><div class="field autofield"><label>작업자</label><input value="山田 太郎"><span class="badge auto">AUTO</span></div><div class="field autofield"><label>수리 ID</label><input value="TR-1258"><span class="badge auto">AUTO</span></div></div></div>
+    <div class="section"><div class="sectionhead"><span>수동입력</span><span class="badge human">HUMAN</span></div><div class="sectionbody"><label>처치내용</label><textarea placeholder="실제 작업 내용 입력"></textarea><label>인계사항</label><textarea placeholder="후속 조치 또는 인계 내용"></textarea></div></div>
+  </div>
+</section>
+<section class="docpanel hidden" id="worker">
+  <div class="toolbar"><div><h2>4. 작업자 확인</h2><div class="sub">작업자 명부를 Master로 활용하는 예시입니다.</div></div><button class="primary" onclick="showDoc('final')">최종확인</button></div>
+  <div class="section"><div class="sectionhead"><span>선택된 작업자</span><span class="badge ok">유효</span></div><div class="sectionbody"><div class="field"><label>성명</label><input value="山田 太郎" readonly><span class="badge">MASTER</span></div><div class="field"><label>소속</label><input value="EFT CMP" readonly><span class="badge">MASTER</span></div><div class="field"><label>자격상태</label><input value="유효" readonly><span class="badge ok">OK</span></div></div></div>
+</section>
+<section class="docpanel hidden" id="final">
+  <div class="toolbar"><div><h2>7. 최종확인 / 문서생성</h2><div class="sub">필수항목 검증 후 Excel Template 반영 → PDF 생성 → 별도 PDF 병합 Web App으로 전달합니다.</div></div></div>
+  <div class="docsummary"><div class="box"><span>공통 KY</span><br><b>12/15</b><br><small>3건 미확인</small></div><div class="box"><span>K706 KY</span><br><b>8/8</b><br><small>완료</small></div><div class="box"><span>간이 Report</span><br><b>60%</b><br><small>처치내용 필요</small></div><div class="box"><span>NG</span><br><b>0</b><br><small>현재 없음</small></div></div>
+  <div class="grid2"><div class="section"><div class="sectionhead"><span>생성 대상</span><span>4개 문서</span></div><div class="sectionbody"><label><input type="checkbox" checked> 공통 KY Excel / PDF</label><br><br><label><input type="checkbox" checked> K706 전용 KY Excel / PDF</label><br><br><label><input type="checkbox" checked> 간이 Report Excel / PDF</label><br><br><label><input type="checkbox" checked> 작업자 확인서</label><br><br><div class="field"><label>최종확인</label><select><option>미확인</option><option>확인 완료</option></select><span class="badge human">필수</span></div><div class="toolbar" style="margin-top:14px"><button>임시저장</button><button class="primary" onclick="alert('샘플: 필수항목 검증 → Excel 매핑 → PDF 생성 → Box 저장')">문서 생성</button></div></div></div><div class="preview">실제 구현 시 PDF Preview 영역<br><br>생성된 3~4개 PDF를 탭 또는 목록으로 표시<br><br>[수정] / [확정] / [PDF 병합 Web App으로 이동]</div></div>
+</section>
+<footer>※ 화면구조 검토용 샘플입니다. 실제 GAS 연동 시 Mapping Master, Document Rule, Box API, PDF 생성 로직을 연결합니다.</footer>
+</main>
+</div>
+</div>
+<script>
+function showDoc(id){document.querySelectorAll('.docpanel').forEach(x=>x.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');document.querySelectorAll('.docbtn[data-doc]').forEach(b=>b.classList.toggle('active',b.dataset.doc===id));window.scrollTo({top:0,behavior:'smooth'});}document.querySelectorAll('.docbtn[data-doc]').forEach(b=>b.addEventListener('click',()=>showDoc(b.dataset.doc)));function ex(id,on){document.getElementById(id).style.display=on?'block':'none';}function showOnlyUnchecked(){document.querySelectorAll('#commonKY .check').forEach(x=>x.classList.toggle('hidden',x.classList.contains('done')));}
+</script>
+</body></html>

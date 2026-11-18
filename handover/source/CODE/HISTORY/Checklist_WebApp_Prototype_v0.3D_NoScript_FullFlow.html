@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>작업서류 자동화 Web App Prototype v0.3D</title>
+<style>
+:root{
+  --bg:#eef2f6;--card:#fff;--line:#d6dde7;--text:#1f2937;--muted:#667085;
+  --nav:#172235;--auto:#fff4ad;--human:#dff3ff;--ok:#e9f7ee;--warn:#fff3d8;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);font-family:Arial,"Noto Sans KR","Noto Sans JP",sans-serif;color:var(--text)}
+button,input,select,textarea{font:inherit}
+.app{max-width:1520px;margin:0 auto;padding:18px}
+.header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
+h1{font-size:23px;margin:0 0 5px}.sub{font-size:13px;color:var(--muted)}
+.shell{display:grid;grid-template-columns:315px minmax(0,1fr);gap:14px}
+.sidebar,.content{background:#fff;border:1px solid var(--line);border-radius:14px}
+.sidebar{padding:14px;align-self:start;position:sticky;top:10px}
+.content{padding:18px}
+.sideTitle{font-size:14px;font-weight:700;margin:2px 0 10px}
+.source{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#fafbfd;margin-bottom:7px}
+.source small{display:block;color:var(--muted);margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:4px 7px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.auto{background:var(--auto)}.human{background:var(--human)}.ok{background:var(--ok)}.warn{background:var(--warn)}
+.block{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.docnav{display:flex;flex-direction:column;gap:7px}
+.docbtn{display:block;text-decoration:none;color:inherit;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px}
+.docbtn:hover{background:#f7f9fc}
+.docbtn .row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.docbtn small{display:block;color:var(--muted);margin-top:5px}
+.section{scroll-margin-top:18px;border-bottom:1px solid #e6ebf1;padding-bottom:28px;margin-bottom:28px}
+.toolbar{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+.toolbar h2{font-size:20px;margin:0 0 4px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-block;text-decoration:none;border:1px solid #c8d0da;background:#fff;color:#1f2937;border-radius:9px;padding:10px 13px;font-weight:700}
+.btn.primary{background:var(--nav);color:#fff;border-color:var(--nav)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.card{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden;margin-bottom:13px}
+.cardHead{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#f8fafc;padding:11px 13px;font-weight:700}
+.cardBody{padding:13px}
+.field{display:grid;grid-template-columns:170px minmax(0,1fr) auto;gap:9px;align-items:center;margin-bottom:9px}
+.field label{font-size:13px}
+input[type=text],input[type=date],input[type=time],select,textarea{width:100%;padding:9px 10px;border:1px solid #cdd5df;border-radius:8px;background:#fff;font-size:13px}
+textarea{min-height:82px;resize:vertical}.autoField input,.autoField select{background:var(--auto)}
+.info{background:#eff6ff;border:1px solid #d7e6f5;border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.5;color:#475569;margin-bottom:12px}
+.selectionBox{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fbfcfe}
+.previewTable{width:100%;border-collapse:collapse;font-size:13px}
+.previewTable th,.previewTable td{border:1px solid var(--line);padding:8px;text-align:left}
+.previewTable th{background:#f5f7fa;width:170px}
+.checkGroup{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.checkHead{display:flex;justify-content:space-between;background:#f8fafc;padding:10px 12px;font-weight:700}
+.checkRow{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:10px 12px;border-top:1px dashed #d7dde5}
+.checkRow:first-child{border-top:none}
+.workers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.worker{border:1px solid var(--line);border-radius:9px;padding:9px;background:#fff}
+.qual{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.qual span{font-size:11px;padding:3px 6px;border:1px solid var(--line);border-radius:999px;background:#fff}
+.qual .yes{background:#eef9f1;border-color:#99caaa}.qual .no{color:#98a2b3}
+.inline{border:1px solid #ccd5df;border-radius:8px;padding:9px 10px;background:#fafbfd;min-height:36px;font-size:13px}
+.previewList{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.previewTab{border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
+.previewTab.active{background:var(--nav);color:#fff;border-color:var(--nav)}
+.pdfFrame{height:520px;border:1px solid #aeb7c4;border-radius:10px;background:#f8fafc;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);padding:24px}
+details{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:#fff}
+summary{cursor:pointer;padding:11px 12px;font-weight:700;background:#f8fafc}
+details>div{padding:12px}
+@media(max-width:1050px){.shell{grid-template-columns:1fr}.sidebar{position:static}.grid2{grid-template-columns:1fr}.workers{grid-template-columns:1fr 1fr}}
+@media(max-width:650px){.field{grid-template-columns:1fr}.workers{grid-template-columns:1fr}.checkRow{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <h1>作業書類 自動・半自動作成システム</h1>
+      <div class="sub">Prototype v0.3D — 스크립트 없이 전체 흐름을 바로 확인하는 샘플</div>
+    </div>
+    <div>
+      <span class="badge ok">전체 메뉴 열람 가능</span>
+    </div>
+  </div>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sideTitle">Source 상태</div>
+      <div class="source"><div><b>고객 Trouble List</b><small>샘플 파일</small></div><span class="badge ok">샘플</span></div>
+      <div class="source"><div><b>Info2026</b><small>装置情報 / 職長_PHS</small></div><span class="badge ok">준비</span></div>
+      <div class="source"><div><b>작업자 Master</b><small>최신 Rev 참조</small></div><span class="badge ok">준비</span></div>
+
+      <div class="block">
+        <div class="sideTitle">작업 흐름</div>
+        <div class="docnav">
+          <a class="docbtn" href="#select"><div class="row"><b>1. 작업 선택</b><span class="badge ok">열람</span></div><small>Trouble List → 作業選択</small></a>
+          <a class="docbtn" href="#base"><div class="row"><b>2. 기본정보</b><span class="badge ok">열람</span></div><small>JOB_DATA 확인/수정</small></a>
+          <a class="docbtn" href="#ky"><div class="row"><b>3. 장치별 KY</b><span class="badge ok">열람</span></div><small>환경별 Template</small></a>
+          <a class="docbtn" href="#emerg"><div class="row"><b>4. 돌발 Check</b><span class="badge ok">열람</span></div><small>선택적 사용</small></a>
+          <a class="docbtn" href="#simple"><div class="row"><b>5. 간이 Report</b><span class="badge ok">열람</span></div><small>Simp_Bevel 샘플</small></a>
+          <a class="docbtn" href="#worker"><div class="row"><b>6. 작업원 Sheet</b><span class="badge ok">열람</span></div><small>최신 Master 반영</small></a>
+          <a class="docbtn" href="#preview"><div class="row"><b>7. PDF Preview</b><span class="badge ok">열람</span></div><small>실제 Excel → PDF</small></a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="content">
+
+      <section class="section" id="select">
+        <div class="toolbar">
+          <div><h2>1. Trouble List / 作業選択</h2><div class="sub">샘플에서는 Bevel 작업을 선택한 것으로 가정하고 다음 단계까지 바로 확인할 수 있습니다.</div></div>
+        </div>
+
+        <div class="selectionBox">
+          <div class="field">
+            <label>① 対象 Trouble List</label>
+            <select>
+              <option>EFTトラブル管理リストRev5.10_20260924.xlsx</option>
+              <option>EFTトラブル管理リストRev5.10_20260923.xlsx</option>
+              <option>EFTトラブル管理リストRev5.10_20260922.xlsx</option>
+            </select>
+            <span class="badge human">샘플</span>
+          </div>
+          <div class="field">
+            <label>② 作業選択</label>
+            <select>
+              <option>No.1258 | OFX-300E-01 | Main Unit Alarm</option>
+              <option selected>No.1259 | OBE-002 | Bevel Sensor Error</option>
+              <option>No.1260 | OFX-300X-03 | Pressure Low</option>
+            </select>
+            <span class="badge human">샘플</span>
+          </div>
+          <div class="info">
+            샘플 검토용으로 <b>No.1259 / OBE-002 / Bevel Sensor Error</b>를 선택한 상태로 다음 화면을 구성했습니다.
+          </div>
+          <div style="display:flex;justify-content:flex-end">
+            <a class="btn primary" href="#base">이 작업 불러오기 →</a>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <div class="cardHead"><span>선택 예정 작업</span><span class="badge ok">샘플 선택완료</span></div>
+          <div class="cardBody">
+            <table class="previewTable">
+              <tr><th>No.</th><td>1259</td></tr>
+              <tr><th>装置ID</th><td>OBE-002</td></tr>
+              <tr><th>トラブル名</th><td>Bevel Sensor Error</td></tr>
+              <tr><th>全棟一覧 분류</th><td>F-REX300E / EAC300bi-hv</td></tr>
+              <tr><th>자동 판정</th><td>Bevel</td></tr>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="base">
+        <div class="toolbar">
+          <div><h2>2. 작업 기본정보</h2><div class="sub">선택한 작업에서 JOB_DATA를 생성한 뒤 사용자가 확인·수정하는 화면.</div></div>
+          <div class="actions"><a class="btn" href="#select">작업 다시 선택</a><a class="btn primary" href="#ky">다음: KY</a></div>
+        </div>
+
+        <div class="grid2">
+          <div class="card">
+            <div class="cardHead"><span>선택된 작업</span><span class="badge ok">Bevel</span></div>
+            <div class="cardBody">
+              <table class="previewTable">
+                <tr><th>No.</th><td>1259</td></tr>
+                <tr><th>装置ID</th><td>OBE-002</td></tr>
+                <tr><th>トラブル名</th><td>Bevel Sensor Error</td></tr>
+                <tr><th>装置区分</th><td>Bevel</td></tr>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardHead"><span>AUTO 정보</span><span class="badge auto">수정 가능</span></div>
+            <div class="cardBody">
+              <div class="field autoField"><label>장치 ID</label><input value="OBE-002"><span class="badge auto">F열</span></div>
+              <div class="field autoField"><label>트러블명</label><input value="Bevel Sensor Error"><span class="badge auto">M열</span></div>
+              <div class="field autoField"><label>작업명</label><input value="Bevel Sensor Error"><span class="badge auto">AUTO</span></div>
+              <div class="field autoField"><label>작업장소</label><input value="FAB1 / Bevel Area"><span class="badge auto">Info2026</span></div>
+              <div class="field autoField"><label>작업일</label><input type="date" value="2026-09-24"><span class="badge auto">수정가능</span></div>
+              <div class="field autoField"><label>시작시간</label><input type="time" value="10:00"><span class="badge auto">기본</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="card">
+            <div class="cardHead"><span>적용 문서</span><span class="badge ok">자동판정</span></div>
+            <div class="cardBody">
+              <div class="field"><label>装置区分</label><select><option selected>Bevel</option><option>300X</option><option>300E</option><option>Other</option></select><span class="badge human">변경가능</span></div>
+              <div class="field"><label>KY Template</label><input value="KY_BEVEL" readonly><span class="badge auto">AUTO</span></div>
+              <div class="field"><label>Simple Report</label><input value="Simp_Bevel" readonly><span class="badge auto">AUTO</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardHead"><span>공통 선택</span><span class="badge human">1회 선택</span></div>
+            <div class="cardBody">
+              <div class="field"><label>作業区分</label>
+                <select>
+                  <option>調査作業</option><option selected>修理作業</option><option>点検作業</option><option>定期メンテナンス作業</option>
+                  <option>移設作業</option><option>新規作業</option><option>改造作業</option><option>清掃作業</option>
+                  <option>サンプリング作業</option><option>カラム交換作業</option><option>ポンプ交換作業</option><option>部品納品</option>
+                </select>
+                <span class="badge human">12종</span>
+              </div>
+              <div class="field"><label>職長</label><select><option selected>山田</option><option>佐藤</option><option>鈴木</option></select><span class="badge human">Info2026</span></div>
+              <div class="field"><label>記入者</label><select><option selected>山田</option><option>佐藤</option><option>鈴木</option></select><span class="badge human">변경가능</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="cardHead"><span>작업자 선택 (최대 6명)</span><span class="badge human">3 / 6</span></div>
+          <div class="cardBody">
+            <div class="workers">
+              <label class="worker"><input type="checkbox" checked> <b>田中</b><div class="qual"><span class="yes">ガス</span><span class="yes">電気</span><span class="no">職長</span><span class="no">安衛法60条</span></div></label>
+              <label class="worker"><input type="checkbox" checked> <b>伊藤</b><div class="qual"><span class="no">ガス</span><span class="yes">電気</span><span class="yes">職長</span><span class="no">安衛法60条</span></div></label>
+              <label class="worker"><input type="checkbox" checked> <b>高橋</b><div class="qual"><span class="yes">ガス</span><span class="no">電気</span><span class="no">職長</span><span class="no">安衛法60条</span></div></label>
+            </div>
+            <div style="margin-top:10px"><div class="sub">공통 출력값</div><div class="inline">田中、伊藤、高橋</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="ky">
+        <div class="toolbar">
+          <div><h2>3. 장치별 KY</h2><div class="sub">Bevel KY Template 적용 샘플.</div></div>
+          <div class="actions"><a class="btn" href="#base">기본정보 수정</a><a class="btn primary" href="#emerg">다음</a></div>
+        </div>
+
+        <div class="card">
+          <div class="cardHead"><span>KY_BEVEL</span><span class="badge auto">AUTO + HUMAN</span></div>
+          <div class="cardBody grid2">
+            <div class="field autoField"><label>P4 作業区分</label><input value="修理作業"><span class="badge auto">공통</span></div>
+            <div class="field autoField"><label>P6 装置ID</label><input value="OBE-002"><span class="badge auto">JOB_DATA</span></div>
+            <div class="field autoField"><label>B7 作業名</label><input value="Bevel Sensor Error"><span class="badge auto">JOB_DATA</span></div>
+            <div class="field autoField"><label>I9:N9 作業者</label><div class="inline">田中、伊藤、高橋</div><span class="badge auto">병합출력</span></div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="checkGroup">
+            <div class="checkHead"><span>作業環境</span><span>샘플</span></div>
+            <label class="checkRow"><span>高所作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>重量物取り扱い</span><input type="checkbox" checked></label>
+            <label class="checkRow"><span>外装パネル取り外し</span><input type="checkbox" checked></label>
+            <label class="checkRow"><span>作業範囲内近傍EMO確認</span><input type="checkbox" checked></label>
+          </div>
+          <div class="checkGroup">
+            <div class="checkHead"><span>電気関連</span><span>샘플</span></div>
+            <label class="checkRow"><span>配線作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>ブレーカON/OFF作業</span><input type="checkbox" checked></label>
+            <label class="checkRow"><span>テスター等使用しての作業</span><input type="checkbox" checked></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="emerg">
+        <div class="toolbar">
+          <div><h2>4. 突発作業用チェックシート</h2><div class="sub">Emerg 사용 샘플. 연속작업이면 실제 Web App에서 해제.</div></div>
+          <div class="actions"><a class="btn" href="#ky">이전</a><a class="btn primary" href="#simple">다음</a></div>
+        </div>
+        <div class="card">
+          <div class="cardHead"><span>Emerg</span><span class="badge ok">사용함</span></div>
+          <div class="cardBody grid2">
+            <div>
+              <div class="field"><label>B6</label><select><option>修理</option><option selected>トラブル</option></select><span class="badge human">선택</span></div>
+              <div class="field autoField"><label>E6 作業名</label><input value="Bevel Sensor Error"><span class="badge auto">AUTO</span></div>
+              <div class="field autoField"><label>M6 装置ID</label><input value="OBE-002"><span class="badge auto">AUTO</span></div>
+              <div class="field autoField"><label>P6 作業場所</label><input value="FAB1 / Bevel Area"><span class="badge auto">Info2026</span></div>
+            </div>
+            <div>
+              <div class="field"><label>I7 職長</label><select><option selected>山田</option><option>佐藤</option></select><span class="badge human">선택</span></div>
+              <div class="field"><label>作業者</label><div class="inline">田中、伊藤、高橋</div><span class="badge auto">공통</span></div>
+              <div class="info">자격 출력 순서: ガス / 電気 / 職長 / 安衛法60条</div>
+            </div>
+          </div>
+        </div>
+        <details open>
+          <summary>作業区分 該当 / 非該当</summary>
+          <div class="grid2">
+            <label>ガス　<input type="radio" name="g" checked> 該当　<input type="radio" name="g"> 非該当</label>
+            <label>電気　<input type="radio" name="e"> 該当　<input type="radio" name="e" checked> 非該当</label>
+            <label>薬品　<input type="radio" name="c"> 該当　<input type="radio" name="c" checked> 非該当</label>
+            <label>高所/重量物　<input type="radio" name="h" checked> 該当　<input type="radio" name="h"> 非該当</label>
+          </div>
+        </details>
+      </section>
+
+      <section class="section" id="simple">
+        <div class="toolbar">
+          <div><h2>5. 簡易 Report</h2><div class="sub">Bevel 선택이므로 Simp_Bevel Template 사용.</div></div>
+          <div class="actions"><a class="btn" href="#emerg">이전</a><a class="btn primary" href="#worker">다음</a></div>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <div class="cardHead"><span>Simp_Bevel</span><span class="badge auto">AUTO</span></div>
+            <div class="cardBody">
+              <div class="field autoField"><label>B3 装置ID</label><input value="OBE-002"><span class="badge auto">AUTO</span></div>
+              <div class="field autoField"><label>D3 トラブル名</label><input value="Bevel Sensor Error"><span class="badge auto">AUTO</span></div>
+              <div class="field"><label>B5 職長</label><select><option selected>山田</option><option>佐藤</option></select><span class="badge human">선택</span></div>
+              <div class="field"><label>C5 作業者</label><div class="inline">田中、伊藤、高橋</div><span class="badge auto">가로출력</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="cardHead"><span>수동입력</span><span class="badge human">HUMAN</span></div>
+            <div class="cardBody">
+              <label>処置内容</label><textarea>Sensor 확인 및 관련부 점검 실시</textarea>
+              <label>引継ぎ事項</label><textarea>후속 확인 필요</textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="worker">
+        <div class="toolbar">
+          <div><h2>6. 作業者 Sheet</h2><div class="sub">Worker Master 표시행만 사용.</div></div>
+          <div class="actions"><a class="btn" href="#simple">이전</a><a class="btn primary" href="#preview">PDF Preview</a></div>
+        </div>
+        <div class="card">
+          <div class="cardHead"><span>자동 반영</span><span class="badge auto">AUTO</span></div>
+          <div class="cardBody grid2">
+            <div class="field autoField"><label>A3 Font</label><input value="11 pt"><span class="badge auto">고정</span></div>
+            <div class="field autoField"><label>C3 作業名</label><input value="Bevel Sensor Error"><span class="badge auto">AUTO</span></div>
+            <div class="field autoField"><label>H3 実施日</label><input value="2026/09/24"><span class="badge auto">AUTO</span></div>
+            <div class="field"><label>Z2 記入者</label><select><option selected>山田</option><option>佐藤</option></select><span class="badge human">선택</span></div>
+          </div>
+        </div>
+        <div class="info">E22:E198 Scan → 숨김 Row 제외 → 선택 작업자의 실제 Row r → B(r-1)에 ✓ → 자격은 I(r-1):L(r-1) 참조.</div>
+      </section>
+
+      <section class="section" id="preview">
+        <div class="toolbar">
+          <div><h2>7. 실제 PDF Preview / 최종확인</h2><div class="sub">실제 구현에서는 업로드한 원본 Excel에 값을 반영한 뒤 그 PDF를 그대로 표시.</div></div>
+          <div class="actions"><a class="btn" href="#base">수정으로 돌아가기</a><a class="btn primary" href="#preview">최종 확정</a></div>
+        </div>
+        <div class="previewList">
+          <span class="previewTab active">Bevel KY</span>
+          <span class="previewTab">Emerg</span>
+          <span class="previewTab">Simp_Bevel</span>
+          <span class="previewTab">Worker Sheet</span>
+        </div>
+        <div class="pdfFrame">
+          <div>
+            <b>실제 Excel → PDF Preview 영역</b><br><br>
+            Bevel KY 앞면: A1:AE100<br>
+            Bevel KY 뒷면: A1:P83<br><br>
+            Emerg: A1:T78<br>
+            Simp_Bevel: A1:D53<br>
+            Worker: A1:Z202<br><br>
+            실제 구현에서는 HTML 재현이 아니라 회사 원본 Excel 양식 그대로 표시
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+          <a class="btn" href="#preview">브라우저 Print Dialog</a>
+          <a class="btn" href="#preview">PDF 병합으로 이동</a>
+          <a class="btn primary" href="#select">최종 확정 샘플</a>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+</body>
+</html>
