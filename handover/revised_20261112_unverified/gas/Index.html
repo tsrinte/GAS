@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<!-- Index v0.6.1 (2026-11-12): v0.6 + worker option label = displayLabel only. 他は v0.6 と同一 -->
+<html lang="ja">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --line: #d7dde3;
+      --text: #1f2933;
+      --muted: #66788a;
+      --accent: #1f5f8b;
+      --accent-soft: #eaf3f9;
+      --danger: #a94442;
+      --warn-bg: #fff8e6;
+      --warn-line: #efd48b;
+      --ok-bg: #edf7ef;
+      --ok-line: #b9d9c0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Meiryo", "Yu Gothic", sans-serif;
+      font-size: 14px;
+    }
+
+    .app {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .state {
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
+    }
+
+    .card-title {
+      margin: 0 0 14px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .selector-grid {
+      display: grid;
+      grid-template-columns: 160px 1fr 160px;
+      gap: 10px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      min-height: 38px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      font: inherit;
+    }
+
+    input,
+    select {
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(31, 95, 139, .12);
+    }
+
+    button {
+      cursor: pointer;
+      padding: 8px 12px;
+      background: #fff;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .5;
+    }
+
+    .source-info {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .tab-btn {
+      width: auto;
+      min-height: 34px;
+      padding: 7px 14px;
+      border-radius: 999px;
+    }
+
+    .tab-btn.active {
+      background: var(--accent-soft);
+      border-color: #a9c9dc;
+      color: #16496d;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      min-width: 0;
+    }
+
+    .date-wrap {
+      display: grid;
+      grid-template-columns: 1fr 42px;
+      gap: 6px;
+    }
+
+    .date-wrap button {
+      min-width: 42px;
+      padding: 0;
+      font-size: 17px;
+    }
+
+    .hidden-picker {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      width: 1px;
+      height: 1px;
+    }
+
+    .section-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin: -4px 0 12px;
+    }
+
+    .ky-groups {
+      display: grid;
+      gap: 12px;
+    }
+
+    .ky-group {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .ky-group-title {
+      padding: 8px 10px;
+      background: #f5f7f9;
+      font-weight: 700;
+    }
+
+    .ky-item {
+      display: grid;
+      grid-template-columns: 42px 1fr 72px;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      border-top: 1px solid var(--line);
+    }
+
+    .ky-item:first-of-type {
+      border-top: 0;
+    }
+
+    .ky-item input[type="checkbox"] {
+      width: 18px;
+      min-height: 18px;
+      margin: 0;
+    }
+
+    .cell-tag {
+      color: var(--muted);
+      font-size: 11px;
+      text-align: right;
+    }
+
+    .simple-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .simple-table th,
+    .simple-table td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .simple-table th {
+      background: #f5f7f9;
+    }
+
+    .tab-warning {
+      margin-top: 12px;
+    }
+
+    .auto-badge {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: #eef2f5;
+      color: #697b8c;
+      font-size: 10px;
+      vertical-align: 1px;
+    }
+
+    .readonly {
+      background: #f5f7f9;
+    }
+
+    .radio-row {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      min-height: 40px;
+      padding: 0 4px;
+    }
+
+    .radio-row label {
+      margin: 0;
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .radio-row input {
+      width: auto;
+      min-height: auto;
+    }
+
+    .worker-grid {
+      display: grid;
+      grid-template-columns: 90px 1fr 1.3fr;
+      gap: 8px 10px;
+      align-items: center;
+    }
+
+    .worker-grid .head {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .worker-no {
+      font-weight: 700;
+    }
+
+    .qual {
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 6px 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fafbfc;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .chip {
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: #edf2f5;
+      color: #4d6172;
+    }
+
+    .chip.on {
+      background: #e6f3ea;
+      color: #2f6b3d;
+    }
+
+    .notice {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 7px;
+      border: 1px solid var(--warn-line);
+      background: var(--warn-bg);
+      white-space: pre-wrap;
+      display: none;
+    }
+
+    .notice.show {
+      display: block;
+    }
+
+    .notice.ok {
+      border-color: var(--ok-line);
+      background: var(--ok-bg);
+    }
+
+    .footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .footer-actions button {
+      width: auto;
+      min-width: 160px;
+    }
+
+    .review {
+      margin-top: 14px;
+      display: none;
+    }
+
+    .review.show {
+      display: block;
+    }
+
+    .review-grid {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      border-top: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+    }
+
+    .review-grid > div {
+      padding: 8px 10px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .review-grid .key {
+      background: #f6f8fa;
+      font-weight: 700;
+    }
+
+    .loading {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, .72);
+      z-index: 999;
+    }
+
+    .loading.show {
+      display: flex;
+    }
+
+    .loading-box {
+      padding: 16px 22px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #fff;
+      font-weight: 700;
+    }
+
+    @media (max-width: 760px) {
+      .selector-grid,
+      .grid-2,
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+
+      .worker-grid {
+        grid-template-columns: 70px 1fr;
+      }
+
+      .worker-grid .qual,
+      .worker-grid .head.qual-head {
+        grid-column: 2;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>作業前書類 自動作成</h1>
+      <div id="stateBadge" class="state">INIT</div>
+    </div>
+
+    <section class="card">
+      <h2 class="card-title">1. 作業を選択</h2>
+
+      <div class="selector-grid">
+        <div>
+          <label for="sortMode">表示基準</label>
+          <select id="sortMode">
+            <option value="NO">No.</option>
+            <option value="MACHINE">装置ID</option>
+            <option value="TROUBLE">トラブル名</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="jobSelect">対象作業</label>
+          <select id="jobSelect">
+            <option value="">読込中...</option>
+          </select>
+        </div>
+
+        <div>
+          <button id="loadJobBtn" class="primary" type="button" disabled>
+            この作業を読込
+          </button>
+        </div>
+      </div>
+
+      <div id="sourceInfo" class="source-info"></div>
+    </section>
+
+    <section id="editCard" class="card" style="display:none;">
+      <div class="tabs">
+        <button class="tab-btn active" type="button" data-tab="basic">基本情報</button>
+        <button class="tab-btn" type="button" data-tab="workers">職長・作業者</button>
+        <button class="tab-btn" type="button" data-tab="ledger">作業者名簿台帳</button>
+        <button class="tab-btn" type="button" data-tab="emerg">突発作業</button>
+        <button class="tab-btn" type="button" data-tab="ky">KY</button>
+        <button class="tab-btn" type="button" data-tab="simple">簡易レポート</button>
+      </div>
+
+      <div id="tab-basic" class="tab-panel active">
+        <div class="grid-3">
+          <div class="field">
+            <label>作業日</label>
+            <div class="date-wrap">
+              <input id="workDate" type="text" inputmode="numeric" placeholder="YYYY-MM-DD">
+              <button id="datePickerBtn" type="button" title="カレンダー">📅</button>
+            </div>
+            <input id="workDatePicker" class="hidden-picker" type="date" tabindex="-1">
+          </div>
+
+          <div class="field">
+            <label>開始時刻</label>
+            <input id="startTime" type="text" inputmode="numeric" placeholder="HH:MM">
+          </div>
+
+          <div class="field">
+            <label>No.</label>
+            <input id="troubleNo" class="readonly" readonly>
+          </div>
+
+          <div class="field">
+            <label>装置ID</label>
+            <input id="machineId" class="readonly" readonly>
+          </div>
+
+          <div class="field">
+            <label>建屋</label>
+            <input id="building" class="readonly" readonly>
+          </div>
+
+        </div>
+
+        <div style="height:12px;"></div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label>装置名 / 型式 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <input id="equipmentModel" type="text">
+          </div>
+
+          <div class="field">
+            <label>作業名 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <input id="workTitle" type="text">
+          </div>
+
+          <div class="field">
+            <label>客先名 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <input id="customerName" type="text">
+          </div>
+
+          <div class="field">
+            <label>作業場所 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <input id="workLocation" type="text">
+          </div>
+
+          <div class="field">
+            <label>製造番号 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <input id="serialNo" type="text">
+          </div>
+
+          <div class="field">
+            <label>旧制番 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <input id="oldSerial" type="text">
+          </div>
+        </div>
+
+        <div id="basicWarning" class="notice tab-warning"></div>
+      </div>
+
+      <div id="tab-workers" class="tab-panel">
+        <div class="grid-2">
+          <div class="field">
+            <label>職長</label>
+            <select id="leaderSelect"></select>
+          </div>
+
+          <div class="field">
+            <label>職長 PHS</label>
+            <input id="leaderPHS" type="text" inputmode="numeric" placeholder="PHS">
+          </div>
+        </div>
+
+        <div style="height:10px;"></div>
+
+        <div class="field">
+          <label>職長資格</label>
+          <div id="leaderQual" class="qual">未選択</div>
+        </div>
+
+        <div style="height:16px;"></div>
+
+        <div class="worker-grid">
+          <div class="head">No.</div>
+          <div class="head">作業者</div>
+          <div class="head qual-head">資格</div>
+
+          <div class="worker-no">1</div>
+          <select class="worker-select" data-index="0"></select>
+          <div class="qual worker-qual" data-index="0">未選択</div>
+
+          <div class="worker-no">2</div>
+          <select class="worker-select" data-index="1"></select>
+          <div class="qual worker-qual" data-index="1">未選択</div>
+
+          <div class="worker-no">3</div>
+          <select class="worker-select" data-index="2"></select>
+          <div class="qual worker-qual" data-index="2">未選択</div>
+
+          <div class="worker-no">4</div>
+          <select class="worker-select" data-index="3"></select>
+          <div class="qual worker-qual" data-index="3">未選択</div>
+
+          <div class="worker-no">5</div>
+          <select class="worker-select" data-index="4"></select>
+          <div class="qual worker-qual" data-index="4">未選択</div>
+
+          <div class="worker-no">6</div>
+          <select class="worker-select" data-index="5"></select>
+          <div class="qual worker-qual" data-index="5">未選択</div>
+        </div>
+
+        <div id="workerWarning" class="notice tab-warning"></div>
+      </div>
+
+      <div id="tab-ledger" class="tab-panel">
+        <h2 class="card-title">作業者名簿台帳</h2>
+        <div class="source-info">
+          「職長・作業者」で選択した作業者を、原本「作業者名簿台帳装置」の入場者確認B列へ反映します。
+        </div>
+        <div style="height:12px;"></div>
+        <div id="ledgerPreview" class="review-grid"></div>
+      </div>
+
+      <div id="tab-ky" class="tab-panel">
+        <h2 class="card-title">KY</h2>
+        <div class="section-note">
+          原本 Front「危険予知・未然予防策」のD列へ、選択項目を ✓ で反映するための入力です。
+        </div>
+
+        <div class="field" style="max-width:420px;">
+          <label>作業区分</label>
+          <select id="workType">
+            <option value="">選択してください</option>
+            <option>調査</option>
+            <option>修理</option>
+            <option>点検</option>
+            <option>定期メンテ</option>
+            <option>移設</option>
+            <option>新規</option>
+            <option>改造</option>
+            <option>清掃</option>
+            <option>サンプリング</option>
+            <option>カラム交換</option>
+            <option>ポンプ交換</option>
+            <option>部品納品</option>
+          </select>
+        </div>
+
+        <div style="height:14px;"></div>
+        <div id="kyChecklist" class="ky-groups"></div>
+        <div id="kyWarning" class="notice tab-warning"></div>
+      </div>
+
+      <div id="tab-simple" class="tab-panel">
+        <h2 class="card-title">簡易レポート</h2>
+        <div class="section-note">
+          装置環境に応じたプロセス消耗品の対象行だけを表示します。
+        </div>
+        <div id="simpleConsumables"></div>
+        <div id="simpleWarning" class="notice tab-warning"></div>
+      </div>
+
+      <div id="tab-emerg" class="tab-panel">
+        <div class="field">
+          <label>修理 / トラブル <span style="color:#b42318;">必須</span></label>
+          <div class="radio-row">
+            <label>
+              <input type="radio" name="repairTroubleMode" value="REPAIR">
+              修理
+            </label>
+            <label>
+              <input type="radio" name="repairTroubleMode" value="TROUBLE">
+              トラブル
+            </label>
+          </div>
+        </div>
+
+        <div id="emergHint" class="source-info">
+          ※ PDF作成前までに「修理」または「トラブル」を選択してください。
+        </div>
+
+        <div id="emergWarning" class="notice tab-warning"></div>
+      </div>
+
+      <div style="height:14px;"></div>
+
+      <div class="footer-actions">
+        <button id="reviewBtn" class="primary" type="button">
+          このタブの内容を確認
+        </button>
+      </div>
+
+      <div id="reviewPanel" class="review">
+        <h2 id="reviewTitle" class="card-title">入力内容確認</h2>
+        <div id="reviewGrid" class="review-grid"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="loading" class="loading">
+    <div id="loadingText" class="loading-box">読込中...</div>
+  </div>
+
+  <script>
+    const APP = {
+      state: 'INIT',
+      jobs: [],
+      loaded: null,
+      currentJobKey: '',
+      currentTab: 'basic'
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      bindEvents();
+      bootstrap();
+    });
+
+    function bindEvents() {
+      document.getElementById('sortMode')
+        .addEventListener('change', renderJobSelect);
+
+      document.getElementById('loadJobBtn')
+        .addEventListener('click', loadSelectedJob);
+
+      document.querySelectorAll('.tab-btn[data-tab]')
+        .forEach(btn => {
+          btn.addEventListener('click', () => openTab(btn.dataset.tab));
+        });
+
+      document.getElementById('leaderSelect')
+        .addEventListener('change', renderLeaderInfo);
+
+      document.querySelectorAll('.worker-select')
+        .forEach(select => {
+          select.addEventListener('change', () => {
+            enforceUniqueWorkers(select);
+          });
+        });
+
+      document.getElementById('reviewBtn')
+        .addEventListener('click', confirmCurrentTab);
+
+      document.getElementById('datePickerBtn')
+        .addEventListener('click', openDatePicker);
+
+      document.getElementById('workDate')
+        .addEventListener('click', openDatePicker);
+
+      document.getElementById('workDatePicker')
+        .addEventListener('change', event => {
+          if (event.target.value) {
+            document.getElementById('workDate').value = event.target.value;
+          }
+        });
+    }
+
+    function bootstrap() {
+      setLoading(true, 'トラブル管理リストを読込中...');
+
+      google.script.run
+        .withSuccessHandler(result => {
+          APP.jobs = result.jobs || [];
+          APP.state = 'INIT';
+
+          document.getElementById('sourceInfo').textContent =
+            `${result.source.fileName} / ${APP.jobs.length}件 / ${Math.round(result.elapsedMs / 100) / 10}s`;
+
+          renderJobSelect();
+          document.getElementById('loadJobBtn').disabled = false;
+          updateStateBadge();
+          setLoading(false);
+        })
+        .withFailureHandler(showFailure)
+        .apiBootstrap();
+    }
+
+    function renderJobSelect() {
+      const select = document.getElementById('jobSelect');
+      const mode = document.getElementById('sortMode').value;
+      const current = select.value;
+
+      select.innerHTML = '<option value="">選択してください</option>';
+
+      const jobs = [...APP.jobs];
+
+      jobs.forEach(job => {
+        const option = document.createElement('option');
+        option.value = job.jobKey;
+
+        if (mode === 'MACHINE') {
+          option.textContent = `${job.machineId} | No.${job.no} | ${job.troubleName}`;
+        } else if (mode === 'TROUBLE') {
+          option.textContent = `${job.troubleName} | ${job.machineId} | No.${job.no}`;
+        } else {
+          option.textContent = `No.${job.no} | ${job.machineId} | ${job.troubleName}`;
+        }
+
+        select.appendChild(option);
+      });
+
+      if (current && jobs.some(j => j.jobKey === current)) {
+        select.value = current;
+      }
+    }
+
+    function loadSelectedJob() {
+      const jobKey = document.getElementById('jobSelect').value;
+
+      if (!jobKey) {
+        alert('対象作業を選択してください。');
+        return;
+      }
+
+      setLoading(true, '作業データを読込中...');
+
+      google.script.run
+        .withSuccessHandler(result => {
+          APP.loaded = result;
+          APP.currentJobKey = jobKey;
+          APP.state = 'JOB_DATA_READY';
+
+          fillBasicFields(result.jobData);
+          fillLeaderOptions(result.leaderOptions || []);
+          fillWorkerOptions(result.workerOptions || []);
+          renderLedgerPreview();
+          renderTabWarning('basic', result.jobData.warnings || []);
+
+          document.querySelectorAll('input[name="repairTroubleMode"]')
+            .forEach(r => r.checked = false);
+
+          document.getElementById('reviewPanel').classList.remove('show');
+          document.getElementById('editCard').style.display = 'block';
+
+          openTab('basic');
+          updateStateBadge();
+          setLoading(false);
+        })
+        .withFailureHandler(showFailure)
+        .apiLoadJob(jobKey);
+    }
+
+    function fillBasicFields(job) {
+      setValue('workDate', job.workDate);
+      setValue('startTime', job.startTime);
+      setValue('troubleNo', job.troubleNo);
+      setValue('machineId', job.machineId);
+      setValue('building', job.building);
+      setValue('equipmentModel', job.equipmentModel);
+      setValue('workTitle', job.workTitle);
+      setValue('customerName', job.customerName);
+      setValue('workLocation', job.workLocation);
+      setValue('serialNo', job.serialNo);
+      setValue('oldSerial', job.oldSerial);
+    }
+
+    function fillLeaderOptions(leaders) {
+      const select = document.getElementById('leaderSelect');
+      select.innerHTML = '<option value="">選択してください</option>';
+
+      leaders.forEach(leader => {
+        const option = document.createElement('option');
+        option.value = leader.leaderKey;
+        option.textContent = leader.name;
+        select.appendChild(option);
+      });
+
+      setValue('leaderPHS', '');
+      document.getElementById('leaderQual').textContent = '未選択';
+    }
+
+    function fillWorkerOptions(workers) {
+      rebuildWorkerOptions(false);
+    }
+
+    function renderLeaderInfo() {
+      const key = document.getElementById('leaderSelect').value;
+      const leader = (APP.loaded?.leaderOptions || [])
+        .find(item => item.leaderKey === key);
+
+      const phsInput = document.getElementById('leaderPHS');
+
+      if (!leader) {
+        phsInput.value = '';
+        document.getElementById('leaderQual').textContent = '未選択';
+        renderTabWarning('workers', []);
+        rebuildWorkerOptions(true);
+        return;
+      }
+
+      phsInput.value =
+        (!leader.phs || leader.phs === '-')
+          ? ''
+          : leader.phs;
+
+      phsInput.placeholder =
+        (!leader.phs || leader.phs === '-')
+          ? 'PHSを入力してください'
+          : 'PHS';
+
+      if (leader.qualificationResolved) {
+        document.getElementById('leaderQual').innerHTML =
+          qualificationHtml(leader.qualifications || {});
+        renderTabWarning('workers', []);
+      } else {
+        document.getElementById('leaderQual').textContent =
+          'Worker Master照合未確定';
+
+        renderTabWarning(
+          'workers',
+          [
+            `職長「${leader.name}」をWorker Masterと一意に照合できませんでした。`
+          ]
+        );
+      }
+
+      rebuildWorkerOptions(true);
+    }
+
+    function rebuildWorkerOptions(preserveSelection) {
+      const leaderKey = document.getElementById('leaderSelect').value;
+      const leader = (APP.loaded?.leaderOptions || [])
+        .find(item => item.leaderKey === leaderKey);
+
+      const blockedWorkerKey = leader?.workerKey || '';
+      const blockedName = leader?.name || '';
+
+      const selects = [...document.querySelectorAll('.worker-select')];
+      const previous = preserveSelection
+        ? selects.map(select => select.value)
+        : selects.map(() => '');
+
+      selects.forEach((select, index) => {
+        const oldValue = previous[index] || '';
+        select.innerHTML = '<option value="">未選択</option>';
+
+        (APP.loaded?.workerOptions || []).forEach(worker => {
+          const sameLeader = blockedWorkerKey
+            ? worker.workerKey === blockedWorkerKey
+            : (blockedName && worker.name === blockedName);
+
+          if (sameLeader) return;
+
+          const option = document.createElement('option');
+          option.value = worker.workerKey;
+          // v0.6.1: 同姓・同名を区別できるよう displayLabel を表示 (ReferenceDataService v6)
+          option.textContent = worker.displayLabel || worker.name;
+          select.appendChild(option);
+        });
+
+        if (oldValue && [...select.options].some(o => o.value === oldValue)) {
+          select.value = oldValue;
+        } else {
+          select.value = '';
+        }
+
+        renderWorkerQual(select);
+      });
+
+      renderLedgerPreview();
+    }
+
+
+    function renderWorkerQual(select) {
+      const index = Number(select.dataset.index);
+      const key = select.value;
+      const worker = (APP.loaded?.workerOptions || [])
+        .find(item => item.workerKey === key);
+
+      const target = document.querySelector(`.worker-qual[data-index="${index}"]`);
+
+      if (!worker) {
+        target.textContent = '未選択';
+        return;
+      }
+
+      target.innerHTML = qualificationHtml(worker.qualifications || {});
+    }
+
+    function qualificationHtml(q) {
+      const items = [
+        ['安衛法60条', q.law60],
+        ['職長', q.leader],
+        ['電気', q.electric],
+        ['ガス', q.gas]
+      ];
+
+      return items
+        .map(([label, on]) => `<span class="chip ${on ? 'on' : ''}">${label}:${on ? '○' : '－'}</span>`)
+        .join('');
+    }
+
+
+    function enforceUniqueWorkers(changedSelect) {
+      const value = changedSelect.value;
+
+      if (!value) {
+        renderWorkerQual(changedSelect);
+        renderLedgerPreview();
+        return;
+      }
+
+      const leaderKey = document.getElementById('leaderSelect').value;
+      const leader = (APP.loaded?.leaderOptions || [])
+        .find(item => item.leaderKey === leaderKey);
+      const worker = (APP.loaded?.workerOptions || [])
+        .find(item => item.workerKey === value);
+
+      if (leader && worker) {
+        const sameLeader = leader.workerKey
+          ? leader.workerKey === worker.workerKey
+          : leader.name === worker.name;
+
+        if (sameLeader) {
+          changedSelect.value = '';
+          renderWorkerQual(changedSelect);
+          renderLedgerPreview();
+          alert('職長と同じ人物は作業者に選択できません。');
+          return;
+        }
+      }
+
+      const duplicates = [...document.querySelectorAll('.worker-select')]
+        .filter(select => select !== changedSelect && select.value === value);
+
+      if (duplicates.length) {
+        changedSelect.value = '';
+        renderWorkerQual(changedSelect);
+        renderLedgerPreview();
+        alert('同じ作業者は重複して選択できません。');
+        return;
+      }
+
+      renderWorkerQual(changedSelect);
+      renderLedgerPreview();
+    }
+
+    function renderLedgerPreview() {
+      const grid = document.getElementById('ledgerPreview');
+
+      if (!grid) return;
+
+      const selected = [...document.querySelectorAll('.worker-select')]
+        .map(select => {
+          const key = select.value;
+          return (APP.loaded?.workerOptions || [])
+            .find(worker => worker.workerKey === key);
+        })
+        .filter(Boolean);
+
+      grid.innerHTML = '';
+
+      if (!selected.length) {
+        const k = document.createElement('div');
+        k.className = 'key';
+        k.textContent = '入場者確認';
+
+        const v = document.createElement('div');
+        v.textContent = '作業者未選択';
+
+        grid.appendChild(k);
+        grid.appendChild(v);
+        return;
+      }
+
+      selected.forEach(worker => {
+        const k = document.createElement('div');
+        k.className = 'key';
+        k.textContent = worker.name;
+
+        const v = document.createElement('div');
+        v.textContent = `✓  →  ${worker.attendanceCell || 'B列対象セル'}`;
+
+        grid.appendChild(k);
+        grid.appendChild(v);
+      });
+    }
+
+
+    function confirmCurrentTab() {
+      if (!APP.currentJobKey || !APP.loaded) {
+        alert('先に作業を読込してください。');
+        return;
+      }
+
+      const tab = APP.currentTab;
+
+      if (tab === 'basic') {
+        const workDate = valueOf('workDate').trim();
+        const startTime = valueOf('startTime').trim();
+
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(workDate)) {
+          alert('作業日は YYYY-MM-DD で入力してください。');
+          return;
+        }
+
+        if (!/^\d{2}:\d{2}$/.test(startTime)) {
+          alert('開始時刻は HH:MM で入力してください。');
+          return;
+        }
+
+        renderSectionReview('基本情報', [
+          ['No.', valueOf('troubleNo')],
+          ['装置ID', valueOf('machineId')],
+          ['作業名', valueOf('workTitle')],
+          ['作業日', workDate],
+          ['開始時刻', startTime],
+          ['客先名', valueOf('customerName')],
+          ['作業場所', valueOf('workLocation')],
+          ['製造番号', valueOf('serialNo')],
+          ['旧制番', valueOf('oldSerial')]
+        ]);
+        return;
+      }
+
+      if (tab === 'workers') {
+        const leaderKey = valueOf('leaderSelect');
+
+        if (!leaderKey) {
+          alert('職長を選択してください。');
+          return;
+        }
+
+        const phs = valueOf('leaderPHS').trim();
+
+        if (!phs) {
+          alert('職長PHSを入力してください。');
+          return;
+        }
+
+        const leader = (APP.loaded?.leaderOptions || [])
+          .find(item => item.leaderKey === leaderKey);
+
+        const workers = getSelectedWorkers();
+
+        renderSectionReview('職長・作業者', [
+          ['職長', leader ? leader.name : '-'],
+          ['職長 PHS', phs],
+          ['作業者', workers.map(w => w.name).join('、') || '未選択']
+        ]);
+        return;
+      }
+
+      if (tab === 'ledger') {
+        renderLedgerPreview();
+
+        const workers = getSelectedWorkers();
+
+        renderSectionReview(
+          '作業者名簿台帳',
+          workers.length
+            ? workers.map(worker => [
+                worker.name,
+                `✓ → ${worker.attendanceCell || 'B列対象セル'}`
+              ])
+            : [['入場者確認', '作業者未選択']]
+        );
+        return;
+      }
+
+      if (tab === 'emerg') {
+        const mode =
+          document.querySelector('input[name="repairTroubleMode"]:checked')?.value || '';
+
+        if (!mode) {
+          alert('「修理」または「トラブル」を選択してください。');
+          return;
+        }
+
+        renderSectionReview('突発作業', [
+          ['修理/トラブル', mode === 'REPAIR' ? '修理' : 'トラブル']
+        ]);
+        return;
+      }
+
+      if (tab === 'ky') {
+        const workType = valueOf('workType');
+
+        if (!workType) {
+          alert('KYの作業区分を選択してください。');
+          return;
+        }
+
+        const selected = getKySelectedItems();
+
+        renderSectionReview('KY', [
+          ['作業区分', workType],
+          ['D列 ✓ 対象', selected.length ? selected.map(item => item.label).join('、') : '選択なし']
+        ]);
+        return;
+      }
+
+      if (tab === 'simple') {
+        const rows = getSimpleSelections();
+
+        renderSectionReview(
+          '簡易レポート',
+          rows.length
+            ? rows.map(item => [item.label, item.value || '未選択'])
+            : [['対象項目', 'なし']]
+        );
+        return;
+      }
+    }
+
+
+    function renderSectionReview(title, rows) {
+      document.getElementById('reviewTitle').textContent =
+        `${title} 内容確認`;
+
+      const grid = document.getElementById('reviewGrid');
+      grid.innerHTML = '';
+
+      rows.forEach(([key, value]) => {
+        const k = document.createElement('div');
+        k.className = 'key';
+        k.textContent = key;
+
+        const v = document.createElement('div');
+        v.textContent = value || '-';
+
+        grid.appendChild(k);
+        grid.appendChild(v);
+      });
+
+      document.getElementById('reviewPanel').classList.add('show');
+      document.getElementById('reviewPanel').scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+
+
+    function getSelectedWorkers() {
+      return [...document.querySelectorAll('.worker-select')]
+        .map(select => {
+          const key = select.value;
+          return (APP.loaded?.workerOptions || [])
+            .find(worker => worker.workerKey === key);
+        })
+        .filter(Boolean);
+    }
+
+
+    function openDatePicker() {
+      const picker = document.getElementById('workDatePicker');
+      picker.value = valueOf('workDate');
+
+      if (picker.showPicker) {
+        picker.showPicker();
+      } else {
+        picker.click();
+      }
+    }
+
+
+    const KY_ITEMS = [
+      {group:'作業環境', cell:'D14', label:'高所作業'},
+      {group:'作業環境', cell:'D15', label:'重量物取り扱い'},
+      {group:'作業環境', cell:'D17', label:'床を開口しての作業'},
+      {group:'作業環境', cell:'D18', label:'外装パネル取り外し'},
+      {group:'作業環境', cell:'D19', label:'作業範囲内近傍EMO確認'},
+      {group:'電気関連', cell:'D20', label:'配線作業'},
+      {group:'電気関連', cell:'D21', label:'ブレーカON/OFF作業'},
+      {group:'電気関連', cell:'D22', label:'テスター等使用しての作業'},
+      {group:'配管作業', cell:'D23', label:'配管作業'},
+      {group:'配管作業', cell:'D24', label:'薬液(強酸/強アル)配管作業'},
+      {group:'薬品作業', cell:'D25', label:'薬液使用部にての作業'},
+      {group:'薬品作業', cell:'D26', label:'その他'},
+      {group:'機械動作', cell:'D27', label:'稼動部動作中の作業'},
+      {group:'機械動作', cell:'D28', label:'分解/組み立て作業'},
+      {group:'廃棄物関連', cell:'D29', label:'廃棄物(部品等)が発生する作業'},
+      {group:'廃棄物関連', cell:'D31', label:'薬液付着した廃棄物が発生する作業'},
+      {group:'工具使用', cell:'D33', label:'標準工具使用作業'},
+      {group:'工具使用', cell:'D34', label:'ドリル等使用作業'},
+      {group:'工具使用', cell:'D36', label:'半田等使用作業'},
+      {group:'工具使用', cell:'D37', label:'ドライヤー使用作業'},
+      {group:'工具使用', cell:'D38', label:'電気機器、工具使用作業'}
+    ];
+
+
+    function renderKyChecklist() {
+      const root = document.getElementById('kyChecklist');
+      root.innerHTML = '';
+
+      const groups = [...new Set(KY_ITEMS.map(item => item.group))];
+
+      groups.forEach(group => {
+        const box = document.createElement('div');
+        box.className = 'ky-group';
+
+        const title = document.createElement('div');
+        title.className = 'ky-group-title';
+        title.textContent = group;
+        box.appendChild(title);
+
+        KY_ITEMS
+          .filter(item => item.group === group)
+          .forEach(item => {
+            const row = document.createElement('label');
+            row.className = 'ky-item';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'ky-check';
+            checkbox.dataset.cell = item.cell;
+            checkbox.dataset.label = item.label;
+
+            const text = document.createElement('span');
+            text.textContent = item.label;
+
+            const cell = document.createElement('span');
+            cell.className = 'cell-tag';
+            cell.textContent = `${item.cell} → ✓`;
+
+            row.appendChild(checkbox);
+            row.appendChild(text);
+            row.appendChild(cell);
+            box.appendChild(row);
+          });
+
+        root.appendChild(box);
+      });
+    }
+
+
+    function getKySelectedItems() {
+      return [...document.querySelectorAll('.ky-check:checked')]
+        .map(input => ({
+          cell: input.dataset.cell,
+          label: input.dataset.label
+        }));
+    }
+
+
+    const SIMPLE_ITEMS = [
+      {row:33, label:'トップリングヘッド', reuse:true},
+      {row:34, label:'ドレッサー', reuse:true},
+      {row:35, label:'パッド', reuse:false},
+      {row:36, label:'ロールスポンジ', reuse:true},
+      {row:37, label:'ペンシルスポンジ', reuse:true},
+      {row:38, label:'ステージローラ', reuse:true},
+      {row:39, label:'ベベルスポンジ', reuse:true},
+      {row:40, label:'研磨テープ', reuse:true},
+      {row:41, label:'バックパッド', reuse:true},
+      {row:42, label:'バッキングフィルム', reuse:false}
+    ];
+
+
+    function renderSimpleConsumables(environment) {
+      const root = document.getElementById('simpleConsumables');
+
+      const minRow = environment === 'BEVEL' ? 36 : 33;
+      const maxRow = environment === 'BEVEL' ? 42 : 39;
+
+      const items = SIMPLE_ITEMS.filter(item =>
+        item.row >= minRow && item.row <= maxRow
+      );
+
+      const table = document.createElement('table');
+      table.className = 'simple-table';
+
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>項目</th>
+            <th>対応</th>
+            <th>原本行</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+
+      const tbody = table.querySelector('tbody');
+
+      items.forEach(item => {
+        const tr = document.createElement('tr');
+
+        const name = document.createElement('td');
+        name.textContent = item.label;
+
+        const choice = document.createElement('td');
+        const select = document.createElement('select');
+        select.className = 'simple-choice';
+        select.dataset.row = String(item.row);
+        select.dataset.label = item.label;
+
+        const options = ['未選択', '取り外し無し', '新品交換'];
+        if (item.reuse) options.push('再利用');
+
+        options.forEach(value => {
+          const option = document.createElement('option');
+          option.value = value === '未選択' ? '' : value;
+          option.textContent = value;
+          select.appendChild(option);
+        });
+
+        choice.appendChild(select);
+
+        const cell = document.createElement('td');
+        cell.textContent = `B${item.row}`;
+
+        tr.appendChild(name);
+        tr.appendChild(choice);
+        tr.appendChild(cell);
+        tbody.appendChild(tr);
+      });
+
+      root.innerHTML = '';
+      root.appendChild(table);
+    }
+
+
+    function getSimpleSelections() {
+      return [...document.querySelectorAll('.simple-choice')]
+        .map(select => ({
+          row: select.dataset.row,
+          label: select.dataset.label,
+          value: select.value
+        }));
+    }
+
+
+    function renderTabWarning(tab, warnings) {
+      const idMap = {
+        basic: 'basicWarning',
+        workers: 'workerWarning',
+        emerg: 'emergWarning',
+        ky: 'kyWarning',
+        simple: 'simpleWarning'
+      };
+
+      const id = idMap[tab];
+
+      if (!id) return;
+
+      const box = document.getElementById(id);
+
+      if (!warnings || !warnings.length) {
+        box.textContent = '';
+        box.className = 'notice tab-warning';
+        return;
+      }
+
+      box.textContent = warnings.map(w => `・${w}`).join('\n');
+      box.className = 'notice tab-warning show';
+    }
+
+    function openTab(name) {
+      APP.currentTab = name;
+
+      document.querySelectorAll('.tab-btn[data-tab]')
+        .forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
+
+      document.querySelectorAll('.tab-panel')
+        .forEach(panel => panel.classList.remove('active'));
+
+      document.getElementById(`tab-${name}`).classList.add('active');
+      document.getElementById('reviewPanel').classList.remove('show');
+    }
+
+    function updateStateBadge() {
+      document.getElementById('stateBadge').textContent = APP.state;
+    }
+
+    function setLoading(show, text) {
+      document.getElementById('loadingText').textContent = text || '読込中...';
+      document.getElementById('loading').classList.toggle('show', show);
+    }
+
+    function showFailure(error) {
+      setLoading(false);
+      const message = error && error.message ? error.message : String(error);
+      alert(message);
+    }
+
+    function setValue(id, value) {
+      document.getElementById(id).value = value || '';
+    }
+
+    function valueOf(id) {
+      return document.getElementById(id).value || '';
+    }
+  </script>
+</body>
+</html>

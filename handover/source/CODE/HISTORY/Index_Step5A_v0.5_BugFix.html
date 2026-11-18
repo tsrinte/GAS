@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --line: #d7dde3;
+      --text: #1f2933;
+      --muted: #66788a;
+      --accent: #1f5f8b;
+      --accent-soft: #eaf3f9;
+      --danger: #a94442;
+      --warn-bg: #fff8e6;
+      --warn-line: #efd48b;
+      --ok-bg: #edf7ef;
+      --ok-line: #b9d9c0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Meiryo", "Yu Gothic", sans-serif;
+      font-size: 14px;
+    }
+
+    .app {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .state {
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
+    }
+
+    .card-title {
+      margin: 0 0 14px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .selector-grid {
+      display: grid;
+      grid-template-columns: 160px 1fr 160px;
+      gap: 10px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      min-height: 38px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      font: inherit;
+    }
+
+    input,
+    select {
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(31, 95, 139, .12);
+    }
+
+    button {
+      cursor: pointer;
+      padding: 8px 12px;
+      background: #fff;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .5;
+    }
+
+    .source-info {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .tab-btn {
+      width: auto;
+      min-height: 34px;
+      padding: 7px 14px;
+      border-radius: 999px;
+    }
+
+    .tab-btn.active {
+      background: var(--accent-soft);
+      border-color: #a9c9dc;
+      color: #16496d;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      min-width: 0;
+    }
+
+    .auto-badge {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: #eef2f5;
+      color: #697b8c;
+      font-size: 10px;
+      vertical-align: 1px;
+    }
+
+    .readonly {
+      background: #f5f7f9;
+    }
+
+    .radio-row {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      min-height: 40px;
+      padding: 0 4px;
+    }
+
+    .radio-row label {
+      margin: 0;
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .radio-row input {
+      width: auto;
+      min-height: auto;
+    }
+
+    .worker-grid {
+      display: grid;
+      grid-template-columns: 90px 1fr 1.3fr;
+      gap: 8px 10px;
+      align-items: center;
+    }
+
+    .worker-grid .head {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .worker-no {
+      font-weight: 700;
+    }
+
+    .qual {
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 6px 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fafbfc;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .chip {
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: #edf2f5;
+      color: #4d6172;
+    }
+
+    .chip.on {
+      background: #e6f3ea;
+      color: #2f6b3d;
+    }
+
+    .notice {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 7px;
+      border: 1px solid var(--warn-line);
+      background: var(--warn-bg);
+      white-space: pre-wrap;
+      display: none;
+    }
+
+    .notice.show {
+      display: block;
+    }
+
+    .notice.ok {
+      border-color: var(--ok-line);
+      background: var(--ok-bg);
+    }
+
+    .footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .footer-actions button {
+      width: auto;
+      min-width: 160px;
+    }
+
+    .review {
+      margin-top: 14px;
+      display: none;
+    }
+
+    .review.show {
+      display: block;
+    }
+
+    .review-grid {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      border-top: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+    }
+
+    .review-grid > div {
+      padding: 8px 10px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .review-grid .key {
+      background: #f6f8fa;
+      font-weight: 700;
+    }
+
+    .loading {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, .72);
+      z-index: 999;
+    }
+
+    .loading.show {
+      display: flex;
+    }
+
+    .loading-box {
+      padding: 16px 22px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #fff;
+      font-weight: 700;
+    }
+
+    @media (max-width: 760px) {
+      .selector-grid,
+      .grid-2,
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+
+      .worker-grid {
+        grid-template-columns: 70px 1fr;
+      }
+
+      .worker-grid .qual,
+      .worker-grid .head.qual-head {
+        grid-column: 2;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>作業前書類 自動作成</h1>
+      <div id="stateBadge" class="state">INIT</div>
+    </div>
+
+    <section class="card">
+      <h2 class="card-title">1. 作業を選択</h2>
+
+      <div class="selector-grid">
+        <div>
+          <label for="sortMode">表示基準</label>
+          <select id="sortMode">
+            <option value="NO">No.</option>
+            <option value="MACHINE">装置ID</option>
+            <option value="TROUBLE">トラブル名</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="jobSelect">対象作業</label>
+          <select id="jobSelect">
+            <option value="">読込中...</option>
+          </select>
+        </div>
+
+        <div>
+          <button id="loadJobBtn" class="primary" type="button" disabled>
+            この作業を読込
+          </button>
+        </div>
+      </div>
+
+      <div id="sourceInfo" class="source-info"></div>
+    </section>
+
+    <section id="editCard" class="card" style="display:none;">
+      <div class="tabs">
+        <button class="tab-btn active" type="button" data-tab="basic">基本情報</button>
+        <button class="tab-btn" type="button" data-tab="workers">職長・作業者</button>
+        <button class="tab-btn" type="button" data-tab="ledger">作業者名簿台帳</button>
+        <button class="tab-btn" type="button" data-tab="emerg">突発作業</button>
+        <button class="tab-btn" type="button" data-tab="ky">KY</button>
+        <button class="tab-btn" type="button" data-tab="simple">簡易レポート</button>
+      </div>
+
+      <div id="tab-basic" class="tab-panel active">
+        <div class="grid-3">
+          <div class="field">
+            <label>作業日</label>
+            <input id="workDate" type="text" inputmode="numeric" placeholder="YYYY-MM-DD">
+          </div>
+
+          <div class="field">
+            <label>開始時刻</label>
+            <input id="startTime" type="time">
+          </div>
+
+          <div class="field">
+            <label>No.</label>
+            <input id="troubleNo" class="readonly" readonly>
+          </div>
+
+          <div class="field">
+            <label>装置ID</label>
+            <input id="machineId" class="readonly" readonly>
+          </div>
+
+          <div class="field">
+            <label>建屋</label>
+            <input id="building" class="readonly" readonly>
+          </div>
+
+          <div class="field">
+            <label>環境 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <select id="environment">
+              <option value="300X">300X</option>
+              <option value="300E">300E</option>
+              <option value="BEVEL">BEVEL</option>
+              <option value="OTHER">OTHER</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="height:12px;"></div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label>装置名 / 型式 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <input id="equipmentModel" type="text">
+          </div>
+
+          <div class="field">
+            <label>作業名 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <input id="workTitle" type="text">
+          </div>
+
+          <div class="field">
+            <label>客先名 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <input id="customerName" type="text">
+          </div>
+
+          <div class="field">
+            <label>作業場所 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <input id="workLocation" type="text">
+          </div>
+
+          <div class="field">
+            <label>製造番号 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <input id="serialNo" type="text">
+          </div>
+
+          <div class="field">
+            <label>旧制番 <span class="auto-badge">AUTO→OVERRIDE</span></label>
+            <input id="oldSerial" type="text">
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-workers" class="tab-panel">
+        <div class="grid-2">
+          <div class="field">
+            <label>職長</label>
+            <select id="leaderSelect"></select>
+          </div>
+
+          <div class="field">
+            <label>職長 PHS</label>
+            <input id="leaderPHS" class="readonly" readonly placeholder="PHS">
+          </div>
+        </div>
+
+        <div style="height:10px;"></div>
+
+        <div class="field">
+          <label>職長資格</label>
+          <div id="leaderQual" class="qual">未選択</div>
+        </div>
+
+        <div style="height:16px;"></div>
+
+        <div class="worker-grid">
+          <div class="head">No.</div>
+          <div class="head">作業者</div>
+          <div class="head qual-head">資格</div>
+
+          <div class="worker-no">1</div>
+          <select class="worker-select" data-index="0"></select>
+          <div class="qual worker-qual" data-index="0">未選択</div>
+
+          <div class="worker-no">2</div>
+          <select class="worker-select" data-index="1"></select>
+          <div class="qual worker-qual" data-index="1">未選択</div>
+
+          <div class="worker-no">3</div>
+          <select class="worker-select" data-index="2"></select>
+          <div class="qual worker-qual" data-index="2">未選択</div>
+
+          <div class="worker-no">4</div>
+          <select class="worker-select" data-index="3"></select>
+          <div class="qual worker-qual" data-index="3">未選択</div>
+
+          <div class="worker-no">5</div>
+          <select class="worker-select" data-index="4"></select>
+          <div class="qual worker-qual" data-index="4">未選択</div>
+
+          <div class="worker-no">6</div>
+          <select class="worker-select" data-index="5"></select>
+          <div class="qual worker-qual" data-index="5">未選択</div>
+        </div>
+      </div>
+
+      <div id="tab-ledger" class="tab-panel">
+        <h2 class="card-title">作業者名簿台帳</h2>
+        <div class="source-info">
+          「職長・作業者」で選択した作業者を、原本「作業者名簿台帳装置」の入場者確認B列へ反映します。
+        </div>
+        <div style="height:12px;"></div>
+        <div id="ledgerPreview" class="review-grid"></div>
+      </div>
+
+      <div id="tab-ky" class="tab-panel">
+        <h2 class="card-title">KY</h2>
+        <div class="notice show ok">
+          UI確認用としてタブを開放しました。基本情報・職長・作業者の共通データは連携済みです。KY固有のチェック項目は次のSTEPで接続します。
+        </div>
+      </div>
+
+      <div id="tab-simple" class="tab-panel">
+        <h2 class="card-title">簡易レポート</h2>
+        <div class="notice show ok">
+          UI確認用としてタブを開放しました。基本情報・職長・作業者の共通データは連携済みです。簡易レポート固有のチェック項目は次のSTEPで接続します。
+        </div>
+      </div>
+
+      <div id="tab-emerg" class="tab-panel">
+        <div class="field">
+          <label>修理 / トラブル <span style="color:#b42318;">必須</span></label>
+          <div class="radio-row">
+            <label>
+              <input type="radio" name="repairTroubleMode" value="REPAIR">
+              修理
+            </label>
+            <label>
+              <input type="radio" name="repairTroubleMode" value="TROUBLE">
+              トラブル
+            </label>
+          </div>
+        </div>
+
+        <div id="emergHint" class="source-info">
+          ※ 未選択のままでは次へ進めません。
+        </div>
+      </div>
+
+      <div id="warningBox" class="notice"></div>
+
+      <div style="height:14px;"></div>
+
+      <div class="footer-actions">
+        <button id="reviewBtn" class="primary" type="button">
+          入力内容を確認
+        </button>
+      </div>
+
+      <div id="reviewPanel" class="review">
+        <h2 class="card-title">入力内容確認</h2>
+        <div id="reviewGrid" class="review-grid"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="loading" class="loading">
+    <div id="loadingText" class="loading-box">読込中...</div>
+  </div>
+
+  <script>
+    const APP = {
+      state: 'INIT',
+      jobs: [],
+      loaded: null,
+      currentJobKey: ''
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      bindEvents();
+      bootstrap();
+    });
+
+    function bindEvents() {
+      document.getElementById('sortMode')
+        .addEventListener('change', renderJobSelect);
+
+      document.getElementById('loadJobBtn')
+        .addEventListener('click', loadSelectedJob);
+
+      document.querySelectorAll('.tab-btn[data-tab]')
+        .forEach(btn => {
+          btn.addEventListener('click', () => openTab(btn.dataset.tab));
+        });
+
+      document.getElementById('leaderSelect')
+        .addEventListener('change', renderLeaderInfo);
+
+      document.querySelectorAll('.worker-select')
+        .forEach(select => {
+          select.addEventListener('change', () => {
+            enforceUniqueWorkers(select);
+          });
+        });
+
+      document.getElementById('reviewBtn')
+        .addEventListener('click', prepareDraft);
+    }
+
+    function bootstrap() {
+      setLoading(true, 'トラブル管理リストを読込中...');
+
+      google.script.run
+        .withSuccessHandler(result => {
+          APP.jobs = result.jobs || [];
+          APP.state = 'INIT';
+
+          document.getElementById('sourceInfo').textContent =
+            `${result.source.fileName} / ${APP.jobs.length}件 / ${Math.round(result.elapsedMs / 100) / 10}s`;
+
+          renderJobSelect();
+          document.getElementById('loadJobBtn').disabled = false;
+          updateStateBadge();
+          setLoading(false);
+        })
+        .withFailureHandler(showFailure)
+        .apiBootstrap();
+    }
+
+    function renderJobSelect() {
+      const select = document.getElementById('jobSelect');
+      const mode = document.getElementById('sortMode').value;
+      const current = select.value;
+
+      select.innerHTML = '<option value="">選択してください</option>';
+
+      const jobs = [...APP.jobs];
+
+      jobs.forEach(job => {
+        const option = document.createElement('option');
+        option.value = job.jobKey;
+
+        if (mode === 'MACHINE') {
+          option.textContent = `${job.machineId} | No.${job.no} | ${job.troubleName}`;
+        } else if (mode === 'TROUBLE') {
+          option.textContent = `${job.troubleName} | ${job.machineId} | No.${job.no}`;
+        } else {
+          option.textContent = `No.${job.no} | ${job.machineId} | ${job.troubleName}`;
+        }
+
+        select.appendChild(option);
+      });
+
+      if (current && jobs.some(j => j.jobKey === current)) {
+        select.value = current;
+      }
+    }
+
+    function loadSelectedJob() {
+      const jobKey = document.getElementById('jobSelect').value;
+
+      if (!jobKey) {
+        alert('対象作業を選択してください。');
+        return;
+      }
+
+      setLoading(true, '作業データを読込中...');
+
+      google.script.run
+        .withSuccessHandler(result => {
+          APP.loaded = result;
+          APP.currentJobKey = jobKey;
+          APP.state = 'JOB_DATA_READY';
+
+          fillBasicFields(result.jobData);
+          fillLeaderOptions(result.leaderOptions || []);
+          fillWorkerOptions(result.workerOptions || []);
+          renderLedgerPreview();
+          renderWarnings(result.jobData.warnings || []);
+
+          document.querySelectorAll('input[name="repairTroubleMode"]')
+            .forEach(r => r.checked = false);
+
+          document.getElementById('reviewPanel').classList.remove('show');
+          document.getElementById('editCard').style.display = 'block';
+
+          openTab('basic');
+          updateStateBadge();
+          setLoading(false);
+        })
+        .withFailureHandler(showFailure)
+        .apiLoadJob(jobKey);
+    }
+
+    function fillBasicFields(job) {
+      setValue('workDate', job.workDate);
+      setValue('startTime', job.startTime);
+      setValue('troubleNo', job.troubleNo);
+      setValue('machineId', job.machineId);
+      setValue('building', job.building);
+      setValue('environment', job.environment);
+      setValue('equipmentModel', job.equipmentModel);
+      setValue('workTitle', job.workTitle);
+      setValue('customerName', job.customerName);
+      setValue('workLocation', job.workLocation);
+      setValue('serialNo', job.serialNo);
+      setValue('oldSerial', job.oldSerial);
+    }
+
+    function fillLeaderOptions(leaders) {
+      const select = document.getElementById('leaderSelect');
+      select.innerHTML = '<option value="">選択してください</option>';
+
+      leaders.forEach(leader => {
+        const option = document.createElement('option');
+        option.value = leader.leaderKey;
+        option.textContent = `${leader.name}  (PHS:${leader.phs || '-'})`;
+        select.appendChild(option);
+      });
+
+      setValue('leaderPHS', '');
+      document.getElementById('leaderQual').textContent = '未選択';
+    }
+
+    function fillWorkerOptions(workers) {
+      rebuildWorkerOptions(false);
+    }
+
+    function renderLeaderInfo() {
+      const key = document.getElementById('leaderSelect').value;
+      const leader = (APP.loaded?.leaderOptions || [])
+        .find(item => item.leaderKey === key);
+
+      const phsInput = document.getElementById('leaderPHS');
+
+      if (!leader) {
+        phsInput.value = '';
+        phsInput.readOnly = true;
+        phsInput.classList.add('readonly');
+        document.getElementById('leaderQual').textContent = '未選択';
+        rebuildWorkerOptions(true);
+        return;
+      }
+
+      const phsMissing = !leader.phs || leader.phs === '-';
+
+      phsInput.value = phsMissing ? '' : leader.phs;
+      phsInput.readOnly = !phsMissing;
+      phsInput.classList.toggle('readonly', !phsMissing);
+      phsInput.placeholder = phsMissing ? 'PHSを入力してください' : 'PHS';
+
+      if (leader.qualificationResolved) {
+        document.getElementById('leaderQual').innerHTML =
+          qualificationHtml(leader.qualifications || {});
+      } else {
+        document.getElementById('leaderQual').textContent =
+          'Worker Master照合未確定';
+      }
+
+      rebuildWorkerOptions(true);
+      renderWarnings(APP.loaded?.jobData?.warnings || []);
+    }
+
+    function rebuildWorkerOptions(preserveSelection) {
+      const leaderKey = document.getElementById('leaderSelect').value;
+      const leader = (APP.loaded?.leaderOptions || [])
+        .find(item => item.leaderKey === leaderKey);
+
+      const blockedWorkerKey = leader?.workerKey || '';
+      const blockedName = leader?.name || '';
+
+      const selects = [...document.querySelectorAll('.worker-select')];
+      const previous = preserveSelection
+        ? selects.map(select => select.value)
+        : selects.map(() => '');
+
+      selects.forEach((select, index) => {
+        const oldValue = previous[index] || '';
+        select.innerHTML = '<option value="">未選択</option>';
+
+        (APP.loaded?.workerOptions || []).forEach(worker => {
+          const sameLeader = blockedWorkerKey
+            ? worker.workerKey === blockedWorkerKey
+            : (blockedName && worker.name === blockedName);
+
+          if (sameLeader) return;
+
+          const option = document.createElement('option');
+          option.value = worker.workerKey;
+          option.textContent = worker.name;
+          select.appendChild(option);
+        });
+
+        if (oldValue && [...select.options].some(o => o.value === oldValue)) {
+          select.value = oldValue;
+        } else {
+          select.value = '';
+        }
+
+        renderWorkerQual(select);
+      });
+
+      renderLedgerPreview();
+    }
+
+
+    function renderWorkerQual(select) {
+      const index = Number(select.dataset.index);
+      const key = select.value;
+      const worker = (APP.loaded?.workerOptions || [])
+        .find(item => item.workerKey === key);
+
+      const target = document.querySelector(`.worker-qual[data-index="${index}"]`);
+
+      if (!worker) {
+        target.textContent = '未選択';
+        return;
+      }
+
+      target.innerHTML = qualificationHtml(worker.qualifications || {});
+    }
+
+    function qualificationHtml(q) {
+      const items = [
+        ['安衛法60条', q.law60],
+        ['職長', q.leader],
+        ['電気', q.electric],
+        ['ガス', q.gas]
+      ];
+
+      return items
+        .map(([label, on]) => `<span class="chip ${on ? 'on' : ''}">${label}:${on ? '○' : '－'}</span>`)
+        .join('');
+    }
+
+
+    function enforceUniqueWorkers(changedSelect) {
+      const value = changedSelect.value;
+
+      if (!value) {
+        renderWorkerQual(changedSelect);
+        renderLedgerPreview();
+        return;
+      }
+
+      const leaderKey = document.getElementById('leaderSelect').value;
+      const leader = (APP.loaded?.leaderOptions || [])
+        .find(item => item.leaderKey === leaderKey);
+      const worker = (APP.loaded?.workerOptions || [])
+        .find(item => item.workerKey === value);
+
+      if (leader && worker) {
+        const sameLeader = leader.workerKey
+          ? leader.workerKey === worker.workerKey
+          : leader.name === worker.name;
+
+        if (sameLeader) {
+          changedSelect.value = '';
+          renderWorkerQual(changedSelect);
+          renderLedgerPreview();
+          alert('職長と同じ人物は作業者に選択できません。');
+          return;
+        }
+      }
+
+      const duplicates = [...document.querySelectorAll('.worker-select')]
+        .filter(select => select !== changedSelect && select.value === value);
+
+      if (duplicates.length) {
+        changedSelect.value = '';
+        renderWorkerQual(changedSelect);
+        renderLedgerPreview();
+        alert('同じ作業者は重複して選択できません。');
+        return;
+      }
+
+      renderWorkerQual(changedSelect);
+      renderLedgerPreview();
+    }
+
+    function renderLedgerPreview() {
+      const grid = document.getElementById('ledgerPreview');
+
+      if (!grid) return;
+
+      const selected = [...document.querySelectorAll('.worker-select')]
+        .map(select => {
+          const key = select.value;
+          return (APP.loaded?.workerOptions || [])
+            .find(worker => worker.workerKey === key);
+        })
+        .filter(Boolean);
+
+      grid.innerHTML = '';
+
+      if (!selected.length) {
+        const k = document.createElement('div');
+        k.className = 'key';
+        k.textContent = '入場者確認';
+
+        const v = document.createElement('div');
+        v.textContent = '作業者未選択';
+
+        grid.appendChild(k);
+        grid.appendChild(v);
+        return;
+      }
+
+      selected.forEach(worker => {
+        const k = document.createElement('div');
+        k.className = 'key';
+        k.textContent = worker.name;
+
+        const v = document.createElement('div');
+        v.textContent = `✓  →  ${worker.attendanceCell || 'B列対象セル'}`;
+
+        grid.appendChild(k);
+        grid.appendChild(v);
+      });
+    }
+
+
+    function prepareDraft() {
+      if (!APP.currentJobKey || !APP.loaded) {
+        alert('先に作業を読込してください。');
+        return;
+      }
+
+      const repairTroubleMode =
+        document.querySelector('input[name="repairTroubleMode"]:checked')?.value || '';
+
+      if (!repairTroubleMode) {
+        openTab('emerg');
+        alert('「修理」または「トラブル」を選択してください。');
+        return;
+      }
+
+      const leaderKey = document.getElementById('leaderSelect').value;
+
+      if (!leaderKey) {
+        openTab('workers');
+        alert('職長を選択してください。');
+        return;
+      }
+
+      const input = {
+        jobKey: APP.currentJobKey,
+        workDate: valueOf('workDate'),
+        startTime: valueOf('startTime'),
+        repairTroubleMode,
+        leaderKey,
+        leaderPHS: valueOf('leaderPHS'),
+        workerKeys: [...document.querySelectorAll('.worker-select')].map(s => s.value),
+        environment: valueOf('environment'),
+        equipmentModel: valueOf('equipmentModel'),
+        workTitle: valueOf('workTitle'),
+        customerName: valueOf('customerName'),
+        workLocation: valueOf('workLocation'),
+        serialNo: valueOf('serialNo'),
+        oldSerial: valueOf('oldSerial')
+      };
+
+      setLoading(true, '入力内容を確認中...');
+
+      google.script.run
+        .withSuccessHandler(result => {
+          APP.state = 'EDITING';
+          renderWarnings(result.warnings || []);
+          renderReview(result.draft);
+          updateStateBadge();
+          setLoading(false);
+        })
+        .withFailureHandler(showFailure)
+        .apiPrepareJobDraft(input);
+    }
+
+    function renderReview(draft) {
+      const rows = [
+        ['No.', draft.troubleNo],
+        ['装置ID', draft.machineId],
+        ['作業名', draft.workTitle],
+        ['作業日', draft.workDate],
+        ['開始時刻', draft.startTime],
+        ['修理/トラブル', draft.repairTroubleMode === 'REPAIR' ? '修理' : 'トラブル'],
+        ['職長', `${draft.leader} / PHS:${draft.leaderPHS}`],
+        ['作業者', (draft.workers || []).map(w => w.name).join('、') || '未選択'],
+        ['作業場所', draft.workLocation],
+        ['製造番号', draft.serialNo]
+      ];
+
+      const grid = document.getElementById('reviewGrid');
+      grid.innerHTML = '';
+
+      rows.forEach(([key, value]) => {
+        const k = document.createElement('div');
+        k.className = 'key';
+        k.textContent = key;
+
+        const v = document.createElement('div');
+        v.textContent = value || '-';
+
+        grid.appendChild(k);
+        grid.appendChild(v);
+      });
+
+      document.getElementById('reviewPanel').classList.add('show');
+      document.getElementById('reviewPanel').scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+
+    function renderWarnings(warnings) {
+      const box = document.getElementById('warningBox');
+
+      if (!warnings || !warnings.length) {
+        box.textContent = '';
+        box.className = 'notice';
+        return;
+      }
+
+      box.textContent = warnings.map(w => `・${w}`).join('\n');
+      box.className = 'notice show';
+    }
+
+    function openTab(name) {
+      document.querySelectorAll('.tab-btn[data-tab]')
+        .forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
+
+      document.querySelectorAll('.tab-panel')
+        .forEach(panel => panel.classList.remove('active'));
+
+      document.getElementById(`tab-${name}`).classList.add('active');
+    }
+
+    function updateStateBadge() {
+      document.getElementById('stateBadge').textContent = APP.state;
+    }
+
+    function setLoading(show, text) {
+      document.getElementById('loadingText').textContent = text || '読込中...';
+      document.getElementById('loading').classList.toggle('show', show);
+    }
+
+    function showFailure(error) {
+      setLoading(false);
+      const message = error && error.message ? error.message : String(error);
+      alert(message);
+    }
+
+    function setValue(id, value) {
+      document.getElementById(id).value = value || '';
+    }
+
+    function valueOf(id) {
+      return document.getElementById(id).value || '';
+    }
+  </script>
+</body>
+</html>

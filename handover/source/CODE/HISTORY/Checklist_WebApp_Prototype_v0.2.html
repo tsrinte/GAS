@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>작업서류 자동화 Web App Prototype v0.2</title>
+<style>
+:root{
+  --bg:#eef2f6;--card:#fff;--line:#d6dde7;--text:#1f2937;--muted:#667085;
+  --nav:#172235;--nav2:#26364d;--auto:#fff4ad;--human:#dff3ff;--ok:#e9f7ee;
+  --warn:#fff3d8;--danger:#fdeaea;--lock:#f2f4f7;--accent:#315b8a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Arial,"Noto Sans KR","Noto Sans JP",sans-serif;color:var(--text)}
+button,input,select,textarea{font:inherit}
+.app{max-width:1560px;margin:0 auto;padding:18px}
+.header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
+h1{font-size:23px;margin:0 0 5px}.sub{font-size:13px;color:var(--muted)}
+.stats{display:flex;gap:8px;flex-wrap:wrap}
+.stat{background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 13px;min-width:110px}
+.stat .v{font-size:18px;font-weight:700;margin-top:2px}
+.shell{display:grid;grid-template-columns:315px minmax(0,1fr);gap:14px}
+.sidebar,.content{background:#fff;border:1px solid var(--line);border-radius:14px}
+.sidebar{padding:14px;align-self:start;position:sticky;top:10px}
+.content{padding:18px;min-height:820px}
+.sideTitle{font-size:14px;font-weight:700;margin:2px 0 10px}
+.source{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#fafbfd;margin-bottom:7px}
+.source small{display:block;color:var(--muted);margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:4px 7px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.auto{background:var(--auto)}.human{background:var(--human)}.ok{background:var(--ok)}.warn{background:var(--warn)}.danger{background:var(--danger)}.lockBadge{background:var(--lock);color:#98a2b3}
+.block{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.docnav{display:flex;flex-direction:column;gap:7px}
+.docbtn{width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px;cursor:pointer}
+.docbtn.active{background:var(--nav);color:#fff;border-color:var(--nav)}
+.docbtn.locked{background:var(--lock);color:#98a2b3;cursor:not-allowed}
+.docbtn small{display:block;color:var(--muted);margin-top:5px}.docbtn.active small{color:#cbd5e1}
+.docbtn .row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.panel{display:none}.panel.active{display:block}
+.toolbar{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+.toolbar h2{font-size:19px;margin:0 0 4px}.actions{display:flex;gap:8px;flex-wrap:wrap}
+button{border:1px solid #c8d0da;background:#fff;border-radius:9px;padding:9px 12px;cursor:pointer;font-weight:700}
+button.primary{background:var(--nav);color:#fff;border-color:var(--nav)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.card{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden;margin-bottom:13px}
+.cardHead{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#f8fafc;padding:11px 13px;font-weight:700}
+.cardBody{padding:13px}
+.field{display:grid;grid-template-columns:160px minmax(0,1fr) auto;gap:9px;align-items:center;margin-bottom:9px}
+.field label{font-size:13px}
+input[type=text],input[type=date],input[type=time],select,textarea{width:100%;padding:9px 10px;border:1px solid #cdd5df;border-radius:8px;background:#fff;font-size:13px}
+textarea{min-height:82px;resize:vertical}.autoField input,.autoField select{background:var(--auto)}
+.changed input,.changed select{outline:2px solid #e0b54c}
+.ovr{display:none;color:#996b00;font-size:11px;font-weight:700}.changed .ovr{display:inline-block}
+.info{background:#eff6ff;border:1px solid #d7e6f5;border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.5;color:#475569;margin-bottom:12px}
+.empty{border:1px dashed #aeb8c6;border-radius:12px;background:#fafbfd;padding:50px 20px;text-align:center;color:var(--muted)}
+.selectionBox{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fbfcfe}
+.previewList{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.previewTab{border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff;cursor:pointer}
+.previewTab.active{background:var(--nav);color:#fff;border-color:var(--nav)}
+.pdfFrame{height:610px;border:1px solid #aeb7c4;border-radius:10px;background:#f8fafc;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);padding:24px}
+.checkGroup{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.checkHead{display:flex;justify-content:space-between;background:#f8fafc;padding:10px 12px;font-weight:700}
+.checkRow{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:10px 12px;border-top:1px dashed #d7dde5}
+.checkRow:first-child{border-top:none}.checkRow label{font-size:13px}
+.workers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.worker{border:1px solid var(--line);border-radius:9px;padding:9px;background:#fff}
+.worker small{color:var(--muted)}.inline{border:1px solid #ccd5df;border-radius:8px;padding:9px 10px;background:#fafbfd;min-height:36px;font-size:13px}
+.switch{position:relative;width:46px;height:25px;background:#cbd5e1;border-radius:99px;cursor:pointer}
+.switch:after{content:"";position:absolute;width:19px;height:19px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s}
+.switch.on{background:#334155}.switch.on:after{left:24px}
+.toggleLine{display:flex;align-items:center;gap:9px}
+.qual{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.qual span{font-size:11px;padding:3px 6px;border:1px solid var(--line);border-radius:999px;background:#fff}
+.qual .yes{background:#eef9f1;border-color:#99caaa}.qual .no{color:#98a2b3}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+.modal.show{display:flex}.modalCard{background:#fff;border-radius:14px;padding:18px;width:min(720px,96vw)}
+.log{background:#111827;color:#dce6f2;border-radius:9px;padding:12px;min-height:160px;font-family:Consolas,monospace;font-size:12px;white-space:pre-line}
+@media(max-width:1050px){.shell{grid-template-columns:1fr}.sidebar{position:static}.grid2{grid-template-columns:1fr}.workers{grid-template-columns:1fr 1fr}}
+@media(max-width:650px){.field{grid-template-columns:1fr}.workers{grid-template-columns:1fr}.checkRow{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <h1>作業書類 自動・半自動作成システム</h1>
+      <div class="sub">Prototype v0.2 — 작업 선택 후에만 데이터 취득·문서 활성화</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div>상태</div><div class="v" id="stateText">INIT</div></div>
+      <div class="stat"><div>환경</div><div class="v" id="envText">-</div></div>
+      <div class="stat"><div>문서</div><div class="v" id="docCount">-</div></div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sideTitle">Source 상태</div>
+      <div class="source"><div><b>고객 Trouble List</b><small>작업 선택 전</small></div><span class="badge warn" id="srcTrouble">대기</span></div>
+      <div class="source"><div><b>Info2026</b><small>装置情報 / 職長_PHS</small></div><span class="badge ok">준비</span></div>
+      <div class="source"><div><b>작업자 Master</b><small>최신 Rev 참조</small></div><span class="badge ok">준비</span></div>
+
+      <div class="block">
+        <div class="sideTitle">작업 흐름</div>
+        <div class="docnav">
+          <button class="docbtn active" data-panel="select"><div class="row"><b>1. 작업 선택</b><span class="badge warn" id="b1">대기</span></div><small>Trouble List → 작업 특정</small></button>
+          <button class="docbtn locked" data-panel="base" disabled><div class="row"><b>2. 기본정보</b><span class="badge lockBadge">🔒</span></div><small>JOB_DATA 확인/수정</small></button>
+          <button class="docbtn locked" data-panel="ky" disabled><div class="row"><b>3. 장치별 KY</b><span class="badge lockBadge">🔒</span></div><small>환경별 Template</small></button>
+          <button class="docbtn locked" data-panel="emerg" disabled><div class="row"><b>4. 돌발 Check</b><span class="badge lockBadge">🔒</span></div><small>선택적 사용</small></button>
+          <button class="docbtn locked" data-panel="simple" disabled><div class="row"><b>5. 간이 Report</b><span class="badge lockBadge">🔒</span></div><small>Simp_STD / Simp_Bevel</small></button>
+          <button class="docbtn locked" data-panel="worker" disabled><div class="row"><b>6. 작업원 Sheet</b><span class="badge lockBadge">🔒</span></div><small>최신 Master 반영</small></button>
+          <button class="docbtn locked" data-panel="preview" disabled><div class="row"><b>7. PDF Preview</b><span class="badge lockBadge">🔒</span></div><small>실제 Excel → PDF</small></button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <!-- 1 SELECT -->
+      <section class="panel active" id="select">
+        <div class="toolbar">
+          <div><h2>1. 작업 선택</h2><div class="sub">작업을 선택하기 전에는 장치ID, 트러블명, 환경, 문서 Template을 확정하지 않습니다.</div></div>
+        </div>
+
+        <div class="selectionBox">
+          <div class="info">※ 아래 목록은 UI 검토용 샘플입니다. 실제 구현에서는 Box의 Auto Mailing 해제 Trouble List를 읽고, 全棟一覧에서 작업 후보를 동적으로 생성합니다.</div>
+          <div class="field">
+            <label>対象 Trouble List</label>
+            <select id="troubleFile" onchange="onFileSelect()">
+              <option value="">선택하십시오</option>
+              <option value="latest">EFTトラブル管理リスト_최신파일(샘플)</option>
+            </select>
+            <span class="badge human">선택</span>
+          </div>
+          <div class="field">
+            <label>作業選択</label>
+            <select id="jobSelect" disabled onchange="onJobSelect()">
+              <option value="">작업을 선택하십시오</option>
+              <option value="j1">No.1258 | OFX-001 | 트러블 A</option>
+              <option value="j2">No.1259 | OBE-002 | 트러블 B</option>
+              <option value="j3">No.1260 | OFX-003 | 트러블 C</option>
+            </select>
+            <span class="badge human">全棟一覧</span>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:12px">
+            <button class="primary" id="loadBtn" disabled onclick="loadJob()">이 작업 불러오기</button>
+          </div>
+        </div>
+
+        <div id="preloadSummary" class="empty" style="margin-top:14px">
+          Trouble List와 작업을 선택하십시오.<br><br>
+          선택 전에는 JOB_DATA 및 문서 Template을 생성하지 않습니다.
+        </div>
+      </section>
+
+      <!-- 2 BASE -->
+      <section class="panel" id="base">
+        <div class="toolbar">
+          <div><h2>2. 작업 기본정보</h2><div class="sub">작업을 선택한 뒤 Trouble List + Info2026 + Worker Master를 통합하여 생성된 값입니다.</div></div>
+          <div class="actions"><button onclick="openPanel('select')">작업 다시 선택</button><button class="primary" onclick="openPanel('ky')">다음: KY</button></div>
+        </div>
+
+        <div class="grid2">
+          <div class="card">
+            <div class="cardHead"><span>AUTO 정보</span><span class="badge auto">수정 가능</span></div>
+            <div class="cardBody">
+              <div class="field autoField"><label>작업 No.</label><input id="jobNo" readonly><span class="badge auto">AUTO</span></div>
+              <div class="field autoField"><label>장치 ID</label><input id="machineId" class="track"><span><span class="badge auto">F열</span> <span class="ovr">OVERRIDE</span></span></div>
+              <div class="field autoField"><label>트러블명</label><input id="troubleName" class="track"><span><span class="badge auto">M열</span> <span class="ovr">OVERRIDE</span></span></div>
+              <div class="field autoField"><label>작업명</label><input id="workTitle" class="track"><span><span class="badge auto">규칙</span> <span class="ovr">OVERRIDE</span></span></div>
+              <div class="field autoField"><label>작업장소</label><input id="workLocation" class="track"><span><span class="badge auto">Info2026</span> <span class="ovr">OVERRIDE</span></span></div>
+              <div class="field autoField"><label>작업일</label><input type="date" id="workDate" value="2026-09-24" class="track"><span><span class="badge auto">기본값</span> <span class="ovr">OVERRIDE</span></span></div>
+              <div class="field autoField"><label>시작시간</label><input type="time" id="startTime" value="10:00" class="track"><span><span class="badge auto">기본 10:00</span> <span class="ovr">OVERRIDE</span></span></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <div class="cardHead"><span>적용 문서</span><span class="badge ok">자동 판정 + 변경 가능</span></div>
+              <div class="cardBody">
+                <div class="field"><label>装置区分</label>
+                  <select id="envSelect" onchange="applyEnv()">
+                    <option value="300X">300X</option>
+                    <option value="300E">300E</option>
+                    <option value="BEVEL">Bevel</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                  <span class="badge human">변경 가능</span>
+                </div>
+                <div class="field"><label>KY Template</label><input id="kyTemplate" readonly><span class="badge auto">AUTO</span></div>
+                <div class="field"><label>Simple Report</label><input id="simpleTemplate" readonly><span class="badge auto">AUTO</span></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="cardHead"><span>공통 선택</span><span class="badge human">1회 선택</span></div>
+              <div class="cardBody">
+                <div class="field"><label>作業区分</label>
+                  <select id="workType">
+                    <option>調査作業</option><option>修理作業</option><option>点検作業</option><option>定期メンテナンス作業</option>
+                    <option>移設作業</option><option>新規作業</option><option>改造作業</option><option>清掃作業</option>
+                    <option>サンプリング作業</option><option>カラム交換作業</option><option>ポンプ交換作業</option><option>部品納品</option>
+                  </select>
+                  <span class="badge human">12종</span>
+                </div>
+                <div class="field"><label>職長</label><select><option>山田</option><option>佐藤</option><option>鈴木</option></select><span class="badge human">Info2026</span></div>
+                <div class="field"><label>記入者</label><select><option>山田</option><option>佐藤</option><option>鈴木</option></select><span class="badge human">변경 가능</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="cardHead"><span>작업자 선택 (최대 6명)</span><span class="badge human" id="workerCount">0 / 6</span></div>
+          <div class="cardBody">
+            <div class="info">실제 구현: Worker Master의 E22:E198을 Scan → 숨김 행 제외 → 표시된 작업자만 후보 생성. 자격 표시순서: ガス / 電気 / 職長 / 安衛法60条.</div>
+            <div class="workers">
+              <label class="worker"><input class="workerChk" type="checkbox" value="田中" onchange="syncWorkers()"> <b>田中</b><div class="qual"><span class="yes">ガス</span><span class="yes">電気</span><span class="no">職長</span><span class="no">安衛法60条</span></div></label>
+              <label class="worker"><input class="workerChk" type="checkbox" value="伊藤" onchange="syncWorkers()"> <b>伊藤</b><div class="qual"><span class="no">ガス</span><span class="yes">電気</span><span class="yes">職長</span><span class="no">安衛法60条</span></div></label>
+              <label class="worker"><input class="workerChk" type="checkbox" value="高橋" onchange="syncWorkers()"> <b>高橋</b><div class="qual"><span class="yes">ガス</span><span class="no">電気</span><span class="no">職長</span><span class="no">安衛法60条</span></div></label>
+              <label class="worker"><input class="workerChk" type="checkbox" value="小林" onchange="syncWorkers()"> <b>小林</b><div class="qual"><span class="no">ガス</span><span class="yes">電気</span><span class="no">職長</span><span class="yes">安衛法60条</span></div></label>
+              <label class="worker"><input class="workerChk" type="checkbox" value="加藤" onchange="syncWorkers()"> <b>加藤</b><div class="qual"><span class="no">ガス</span><span class="no">電気</span><span class="yes">職長</span><span class="yes">安衛法60条</span></div></label>
+              <label class="worker"><input class="workerChk" type="checkbox" value="吉田" onchange="syncWorkers()"> <b>吉田</b><div class="qual"><span class="yes">ガス</span><span class="no">電気</span><span class="no">職長</span><span class="yes">安衛法60条</span></div></label>
+            </div>
+            <div style="margin-top:10px"><div class="sub">출력 예시</div><div class="inline" id="workerInline">미선택</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 KY -->
+      <section class="panel" id="ky">
+        <div class="toolbar">
+          <div><h2>3. 장치별 KY</h2><div class="sub">선택한 작업의 환경에 맞는 Template에만 값을 반영합니다. 300E/Bevel/Other는 현재 300X 공통 Layout으로 임시 운용.</div></div>
+          <div class="actions"><button onclick="openPanel('base')">기본정보 수정</button><button class="primary" onclick="openPanel('emerg')">다음</button></div>
+        </div>
+        <div class="card">
+          <div class="cardHead"><span>Template 정보</span><span class="badge auto" id="kyTemplateBadge">-</span></div>
+          <div class="cardBody grid2">
+            <div class="field autoField"><label>P4 作業区分</label><input id="kyWorkType" readonly><span class="badge auto">공통값</span></div>
+            <div class="field autoField"><label>P6 装置ID</label><input id="kyMachine" readonly><span class="badge auto">JOB_DATA</span></div>
+            <div class="field autoField"><label>B7 作業名</label><input id="kyTitle" readonly><span class="badge auto">JOB_DATA</span></div>
+            <div class="field autoField"><label>I9:N9 作業者</label><div class="inline workerMirror">미선택</div><span class="badge auto">현재 병합 출력</span></div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="checkGroup">
+            <div class="checkHead"><span>作業環境</span><span>5</span></div>
+            <label class="checkRow"><span>高所作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>重量物取り扱い</span><input type="checkbox"></label>
+            <label class="checkRow"><span>床を開口しての作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>外装パネル取り外し</span><input type="checkbox"></label>
+            <label class="checkRow"><span>作業範囲内近傍EMO確認</span><input type="checkbox"></label>
+          </div>
+          <div class="checkGroup">
+            <div class="checkHead"><span>電気関連</span><span>3</span></div>
+            <label class="checkRow"><span>配線作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>ブレーカON/OFF作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>テスター等使用しての作業</span><input type="checkbox"></label>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="checkGroup">
+            <div class="checkHead"><span>配管 / 薬品</span><span>5</span></div>
+            <label class="checkRow"><span>配管作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>薬液(強酸/強アルカリ)配管作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>薬液使用部にての作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>その他</span><input type="checkbox"></label>
+            <label class="checkRow"><span>薬液付着廃棄物発生</span><input type="checkbox"></label>
+          </div>
+          <div class="checkGroup">
+            <div class="checkHead"><span>機械 / 工具</span><span>8</span></div>
+            <label class="checkRow"><span>稼動部動作中の作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>分解/組み立て作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>標準工具使用作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>ドリル等使用作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>半田等使用作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>ドライヤー使用作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>電気機器、工具使用作業</span><input type="checkbox"></label>
+            <label class="checkRow"><span>廃棄物(部品等)が発生する作業</span><input type="checkbox"></label>
+          </div>
+        </div>
+        <div class="info">체크 결과는 실제 Excel의 D14:D38 Mapping에 ✓로 반영. 향후 병합 해제 Template으로 변경 시 작업자 출력은 SPLIT_CELLS Mode로 전환.</div>
+      </section>
+
+      <!-- 4 EMERG -->
+      <section class="panel" id="emerg">
+        <div class="toolbar">
+          <div><h2>4. 돌발 작업 Check</h2><div class="sub">기본 사용. 연속작업 등 불필요한 경우 문서 자체를 PDF 출력 대상에서 제외할 수 있습니다.</div></div>
+          <div class="actions"><button onclick="openPanel('ky')">이전</button><button class="primary" onclick="openPanel('simple')">다음</button></div>
+        </div>
+        <div class="card">
+          <div class="cardHead"><span>문서 사용 여부</span><div class="toggleLine"><span id="emergText">사용함</span><div class="switch on" id="emergSwitch" onclick="toggleEmerg()"></div></div></div>
+          <div class="cardBody" id="emergBody">
+            <div class="grid2">
+              <div>
+                <div class="field"><label>B6 구분</label><select><option>修理</option><option>トラブル</option></select><span class="badge human">선택</span></div>
+                <div class="field autoField"><label>E6 作業名</label><input id="emgTitle" readonly><span class="badge auto">JOB_DATA</span></div>
+                <div class="field autoField"><label>M6 装置ID</label><input id="emgMachine" readonly><span class="badge auto">JOB_DATA</span></div>
+                <div class="field autoField"><label>P6 作業場所</label><input id="emgLocation" readonly><span class="badge auto">Info2026</span></div>
+              </div>
+              <div>
+                <div class="field"><label>I7 職長</label><select><option>山田</option><option>佐藤</option><option>鈴木</option></select><span class="badge human">선택</span></div>
+                <div class="field"><label>作業者</label><div class="inline workerMirror">미선택</div><span class="badge auto">공통</span></div>
+                <div class="info">자격 표시순서: ガス / 電気 / 職長 / 安衛法60条. 실제 Excel에서는 Worker Master 자격값을 읽어 해당 타원 Shape만 유지.</div>
+              </div>
+            </div>
+            <div class="checkGroup">
+              <div class="checkHead"><span>作業区分</span><span>該当 / 非該当</span></div>
+              <div class="checkRow"><span>ガス</span><div><label><input type="radio" name="gas"> 該当</label> <label><input type="radio" name="gas"> 非該当</label></div></div>
+              <div class="checkRow"><span>電気</span><div><label><input type="radio" name="elec"> 該当</label> <label><input type="radio" name="elec"> 非該当</label></div></div>
+              <div class="checkRow"><span>薬品</span><div><label><input type="radio" name="chem"> 該当</label> <label><input type="radio" name="chem"> 非該当</label></div></div>
+              <div class="checkRow"><span>高所/重量物</span><div><label><input type="radio" name="high"> 該当</label> <label><input type="radio" name="high"> 非該当</label></div></div>
+            </div>
+          </div>
+          <div id="emergOff" class="empty" style="display:none;margin:13px">이번 작업에서는 Emerg 문서를 생성하지 않습니다.</div>
+        </div>
+      </section>
+
+      <!-- 5 SIMPLE -->
+      <section class="panel" id="simple">
+        <div class="toolbar">
+          <div><h2>5. 간이 Report</h2><div class="sub">Bevel이면 Simp_Bevel, 그 외는 Simp_STD.</div></div>
+          <div class="actions"><button onclick="openPanel('emerg')">이전</button><button class="primary" onclick="openPanel('worker')">다음</button></div>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <div class="cardHead"><span>기본정보</span><span class="badge auto" id="simpBadge">-</span></div>
+            <div class="cardBody">
+              <div class="field autoField"><label>B3 装置ID</label><input id="simpMachine" readonly><span class="badge auto">JOB_DATA</span></div>
+              <div class="field autoField"><label>D3 トラブル名</label><input id="simpTrouble" readonly><span class="badge auto">JOB_DATA</span></div>
+              <div class="field"><label>B5 職長</label><select><option>山田</option><option>佐藤</option><option>鈴木</option></select><span class="badge human">선택</span></div>
+              <div class="field"><label>C5 作業者</label><div class="inline workerMirror">미선택</div><span class="badge auto">가로 출력</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="cardHead"><span>수동입력</span><span class="badge human">HUMAN</span></div>
+            <div class="cardBody">
+              <label style="font-size:13px">処置内容</label><textarea placeholder="작업 내용을 입력"></textarea>
+              <label style="font-size:13px">引継ぎ事項</label><textarea placeholder="후속조치/인계사항"></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 WORKER -->
+      <section class="panel" id="worker">
+        <div class="toolbar">
+          <div><h2>6. 작업원 Sheet</h2><div class="sub">표시 상태인 작업자만 사용하고, 선택 작업자의 실제 행을 기준으로 입장자 ✓ 및 자격을 반영합니다.</div></div>
+          <div class="actions"><button onclick="openPanel('simple')">이전</button><button class="primary" onclick="generatePreview()">PDF Preview 생성</button></div>
+        </div>
+        <div class="card">
+          <div class="cardHead"><span>자동 반영</span><span class="badge auto">AUTO</span></div>
+          <div class="cardBody grid2">
+            <div class="field autoField"><label>A3 Font</label><input value="11 pt" readonly><span class="badge auto">고정</span></div>
+            <div class="field autoField"><label>C3 作業名</label><input id="wkTitle" readonly><span class="badge auto">JOB_DATA</span></div>
+            <div class="field autoField"><label>H3 作業実施日</label><input id="wkDate" readonly><span class="badge auto">workDate</span></div>
+            <div class="field"><label>Z2 記入者</label><select><option>山田</option><option>佐藤</option><option>鈴木</option></select><span class="badge human">職長 목록</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="cardHead"><span>선택 작업자 반영</span><span class="badge ok">동적 Row</span></div>
+          <div class="cardBody">
+            <div class="info">E22:E198 Scan → 숨김 Row Skip → 선택 작업자의 실제 Row = r → B(r-1)에 ✓. 자격은 I(r-1):L(r-1) 참조.</div>
+            <div class="inline workerMirror">미선택</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 PREVIEW -->
+      <section class="panel" id="preview">
+        <div class="toolbar">
+          <div><h2>7. 실제 PDF Preview / 최종확인</h2><div class="sub">여기서는 HTML로 양식을 재현하지 않습니다. 실제 Excel Template에 값을 반영한 뒤 생성된 PDF를 표시하는 영역입니다.</div></div>
+          <div class="actions"><button onclick="openPanel('base')">수정으로 돌아가기</button><button class="primary" onclick="finalize()">최종 확정</button></div>
+        </div>
+        <div class="previewList">
+          <button class="previewTab active" onclick="pickPreview(this,'KY')">장치별 KY</button>
+          <button class="previewTab" id="pvEmerg" onclick="pickPreview(this,'EMERG')">돌발 Check</button>
+          <button class="previewTab" onclick="pickPreview(this,'SIMPLE')">간이 Report</button>
+          <button class="previewTab" onclick="pickPreview(this,'WORKER')">작업원 Sheet</button>
+        </div>
+        <div class="pdfFrame" id="pdfFrame">
+          <div><b>실제 Excel → PDF Preview 영역</b><br><br>
+          KY 앞면: A1:AE100<br>
+          KY 뒷면: A1:P83<br><br>
+          실제 구현 시 Box PDF Representation 또는 PDF Viewer 표시
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+          <button onclick="window.print()">브라우저 Print Dialog</button>
+          <button onclick="alert('샘플: 기존 PDF 병합 Web App으로 Box File ID와 작업 No. 전달')">PDF 병합으로 이동</button>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modalCard">
+    <h3>PDF Preview 생성</h3>
+    <div class="log" id="log">대기중...</div>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px"><button onclick="closeModal()">닫기</button></div>
+  </div>
+</div>
+
+<script>
+let loaded=false, emergOn=true;
+const mockJobs={
+ j1:{no:'1258',machine:'OFX-001',trouble:'트러블 A',title:'트러블 A',loc:'FAB-A',env:'300X'},
+ j2:{no:'1259',machine:'OBE-002',trouble:'트러블 B',title:'트러블 B',loc:'FAB-B',env:'BEVEL'},
+ j3:{no:'1260',machine:'OFX-003',trouble:'트러블 C',title:'트러블 C',loc:'FAB-C',env:'300E'}
+};
+
+function onFileSelect(){
+ const ok=document.getElementById('troubleFile').value!=='';
+ document.getElementById('jobSelect').disabled=!ok;
+ document.getElementById('srcTrouble').textContent=ok?'파일 선택':'대기';
+}
+function onJobSelect(){
+ document.getElementById('loadBtn').disabled=document.getElementById('jobSelect').value==='';
+}
+function loadJob(){
+ const key=document.getElementById('jobSelect').value, j=mockJobs[key]; if(!j)return;
+ loaded=true;
+ document.getElementById('jobNo').value=j.no;
+ document.getElementById('machineId').value=j.machine;
+ document.getElementById('troubleName').value=j.trouble;
+ document.getElementById('workTitle').value=j.title;
+ document.getElementById('workLocation').value=j.loc;
+ document.getElementById('envSelect').value=j.env;
+ applyEnv();
+ document.getElementById('srcTrouble').textContent='적용';
+ document.getElementById('srcTrouble').className='badge ok';
+ document.getElementById('stateText').textContent='JOB_DATA_READY';
+ document.getElementById('b1').textContent='완료';
+ document.getElementById('b1').className='badge ok';
+ document.getElementById('preloadSummary').innerHTML=`<b>선택 완료</b><br><br>No.${j.no} / ${j.machine} / ${j.trouble}<br><br>JOB_DATA 생성 후 다음 단계가 활성화되었습니다.`;
+ unlockPanels();
+ syncDerived();
+ openPanel('base');
+ setupOverrides();
+}
+function unlockPanels(){
+ document.querySelectorAll('.docbtn[data-panel]').forEach(b=>{
+   if(b.dataset.panel!=='select'){b.disabled=false;b.classList.remove('locked');}
+ });
+}
+function openPanel(id){
+ if(!loaded && id!=='select')return;
+ document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===id));
+ document.querySelectorAll('.docbtn[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===id));
+ window.scrollTo({top:0,behavior:'smooth'});
+ if(id==='ky') syncDerived();
+}
+document.querySelectorAll('.docbtn[data-panel]').forEach(b=>b.addEventListener('click',()=>openPanel(b.dataset.panel)));
+
+function applyEnv(){
+ const env=document.getElementById('envSelect').value;
+ const map={
+  '300X':{ky:'KY_300X',simp:'Simp_STD',label:'300X'},
+  '300E':{ky:'KY_300E',simp:'Simp_STD',label:'300E'},
+  'BEVEL':{ky:'KY_BEVEL',simp:'Simp_Bevel',label:'Bevel'},
+  'OTHER':{ky:'KY_OTHER',simp:'Simp_STD',label:'Other'}
+ };
+ const m=map[env];
+ document.getElementById('envText').textContent=m.label;
+ document.getElementById('kyTemplate').value=m.ky;
+ document.getElementById('simpleTemplate').value=m.simp;
+ document.getElementById('kyTemplateBadge').textContent=m.ky;
+ document.getElementById('simpBadge').textContent=m.simp;
+ document.getElementById('docCount').textContent=emergOn?'4':'3';
+}
+function syncDerived(){
+ document.getElementById('kyWorkType').value=document.getElementById('workType').value;
+ document.getElementById('kyMachine').value=document.getElementById('machineId').value;
+ document.getElementById('kyTitle').value=document.getElementById('workTitle').value;
+ document.getElementById('emgTitle').value=document.getElementById('workTitle').value;
+ document.getElementById('emgMachine').value=document.getElementById('machineId').value;
+ document.getElementById('emgLocation').value=document.getElementById('workLocation').value;
+ document.getElementById('simpMachine').value=document.getElementById('machineId').value;
+ document.getElementById('simpTrouble').value=document.getElementById('troubleName').value;
+ document.getElementById('wkTitle').value=document.getElementById('workTitle').value;
+ const d=document.getElementById('workDate').value;
+ document.getElementById('wkDate').value=d?d.replaceAll('-','/'):''; 
+}
+function setupOverrides(){
+ document.querySelectorAll('.track').forEach(el=>{
+   if(el.dataset.bound)return; el.dataset.bound='1';
+   const original=el.value;
+   el.addEventListener('input',()=>{
+     const f=el.closest('.field'); if(f)f.classList.toggle('changed',el.value!==original);
+     syncDerived();
+   });
+ });
+ document.getElementById('workType').addEventListener('change',syncDerived);
+}
+function syncWorkers(){
+ const all=[...document.querySelectorAll('.workerChk:checked')];
+ if(all.length>6){event.target.checked=false;alert('최대 6명까지 선택 가능합니다.');return syncWorkers();}
+ const names=all.map(x=>x.value);
+ document.getElementById('workerCount').textContent=names.length+' / 6';
+ document.getElementById('workerInline').textContent=names.join('、')||'미선택';
+ document.querySelectorAll('.workerMirror').forEach(x=>x.textContent=names.join('、')||'미선택');
+}
+function toggleEmerg(){
+ emergOn=!emergOn;
+ document.getElementById('emergSwitch').classList.toggle('on',emergOn);
+ document.getElementById('emergText').textContent=emergOn?'사용함':'사용 안 함';
+ document.getElementById('emergBody').style.display=emergOn?'block':'none';
+ document.getElementById('emergOff').style.display=emergOn?'none':'block';
+ document.getElementById('pvEmerg').style.display=emergOn?'inline-block':'none';
+ document.getElementById('docCount').textContent=emergOn?'4':'3';
+}
+function generatePreview(){
+ syncDerived();
+ document.getElementById('modal').classList.add('show');
+ const env=document.getElementById('envSelect').value;
+ const simp=env==='BEVEL'?'Simp_Bevel':'Simp_STD';
+ const lines=[
+  '[1/7] 선택된 Trouble List Row 확인',
+  '[2/7] JOB_DATA 검증',
+  `[3/7] ${document.getElementById('kyTemplate').value} Template 반영`,
+  emergOn?'[4/7] Emerg Template 반영 (A1:T78)':'[4/7] Emerg 제외',
+  `[5/7] ${simp} Template 반영 (A1:D53)`,
+  '[6/7] 최신 Worker Master 사본 반영 (A1:Z202)',
+  '[7/7] Box 업로드 → 실제 Excel 기반 PDF 생성',
+  '',
+  'Preview 준비 완료'
+ ];
+ const log=document.getElementById('log');log.textContent='';let i=0;
+ const t=setInterval(()=>{log.textContent+=lines[i++]+'\n';if(i>=lines.length){clearInterval(t);setTimeout(()=>{closeModal();openPanel('preview');},500)}},170);
+}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+function pickPreview(btn,type){
+ document.querySelectorAll('.previewTab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+ const ranges={KY:'앞면 A1:AE100 / 뒷면 A1:P83',EMERG:'A1:T78',SIMPLE:'A1:D53',WORKER:'A1:Z202'};
+ document.getElementById('pdfFrame').innerHTML=`<div><b>${type} 실제 PDF Preview 영역</b><br><br>${ranges[type]}<br><br>실제 구현 시 회사 원본 Excel 포맷이 그대로 PDF로 표시됩니다.<br>HTML 재작성 화면이 아닙니다.</div>`;
+}
+function finalize(){alert('샘플: Preview 확인 완료 → Box 최종 폴더 저장 → Print/PDF 병합 단계')}
+</script>
+</body>
+</html>

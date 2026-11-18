@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>작업서류 자동화 샘플 v0.4</title>
+<style>
+body{font-family:Arial,"Noto Sans KR","Noto Sans JP",sans-serif;background:#f4f6f8;margin:0;color:#1f2937}
+.wrap{max-width:1180px;margin:0 auto;padding:24px}
+h1{font-size:24px;margin:0 0 8px}
+.note{color:#667085;font-size:13px;margin-bottom:18px}
+.card{background:#fff;border:1px solid #d9dee7;border-radius:14px;padding:18px;margin-bottom:16px}
+.row{display:grid;grid-template-columns:180px 1fr 120px;gap:12px;align-items:center;margin-bottom:12px}
+label{font-size:14px;font-weight:700}
+select,input{width:100%;padding:10px;border:1px solid #cfd6df;border-radius:8px;background:#fff}
+button{padding:10px 14px;border:1px solid #c8d0da;border-radius:9px;background:#fff;font-weight:700;cursor:pointer}
+button.primary{background:#172235;color:#fff;border-color:#172235}
+button:disabled{opacity:.45;cursor:not-allowed}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid #d7dee7;font-size:11px}
+.badge.ok{background:#e9f7ee}.badge.wait{background:#fff3d8}
+.preview{background:#f8fafc;border:1px solid #d9dee7;border-radius:10px;padding:14px;min-height:150px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border:1px solid #d9dee7;padding:8px;text-align:left}
+th{background:#eef2f7;width:180px}
+.steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.step{padding:8px 10px;border-radius:9px;border:1px solid #d9dee7;background:#fff}
+.step.active{background:#172235;color:#fff}
+.hidden{display:none}
+.auto{background:#fff4ad}
+.sectionTitle{font-size:18px;font-weight:700;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.row{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>作業書類 自動・半自動作成システム</h1>
+  <div class="note">샘플 v0.4 — Trouble List 선택 → 作業選択 → 작업 불러오기 → 기본정보 확인</div>
+
+  <div class="steps">
+    <div class="step active">1. Trouble List / 作業選択</div>
+    <div class="step">2. 基本情報</div>
+    <div class="step">3. KY</div>
+    <div class="step">4. Emerg</div>
+    <div class="step">5. Report</div>
+    <div class="step">6. Worker</div>
+    <div class="step">7. Preview</div>
+  </div>
+
+  <div class="card">
+    <div class="sectionTitle">1. Trouble List / 作業選択</div>
+
+    <div class="row">
+      <label>① 対象 Trouble List</label>
+      <select id="fileSelect">
+        <option value="">선택하십시오</option>
+        <option value="20260924">EFTトラブル管理リストRev5.10_20260924.xlsx</option>
+        <option value="20260923">EFTトラブル管理リストRev5.10_20260923.xlsx</option>
+      </select>
+      <span class="badge wait" id="fileStatus">대기</span>
+    </div>
+
+    <div class="row">
+      <label>② 作業選択</label>
+      <select id="jobSelect" disabled>
+        <option value="">먼저 Trouble List를 선택하십시오</option>
+      </select>
+      <span class="badge wait" id="jobStatus">대기</span>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button id="demoBtn">샘플 자동 선택</button>
+      <button class="primary" id="loadBtn" disabled>이 작업 불러오기</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sectionTitle">선택 예정 작업</div>
+    <div id="candidate" class="preview">Trouble List를 선택하면 작업 후보가 표시됩니다.</div>
+  </div>
+
+  <div class="card hidden" id="baseCard">
+    <div class="sectionTitle">2. 기본정보</div>
+    <div class="grid2">
+      <div>
+        <table>
+          <tr><th>No.</th><td id="vNo"></td></tr>
+          <tr><th>装置ID</th><td id="vMachine"></td></tr>
+          <tr><th>トラブル名</th><td id="vTrouble"></td></tr>
+          <tr><th>全棟一覧分類</th><td id="vCategory"></td></tr>
+          <tr><th>装置区分</th><td id="vEnv"></td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="row" style="grid-template-columns:130px 1fr">
+          <label>作業名</label><input id="workTitle" class="auto">
+        </div>
+        <div class="row" style="grid-template-columns:130px 1fr">
+          <label>作業場所</label><input id="workLocation" class="auto">
+        </div>
+        <div class="row" style="grid-template-columns:130px 1fr">
+          <label>KY Template</label><input id="kyTemplate" class="auto" readonly>
+        </div>
+        <div class="row" style="grid-template-columns:130px 1fr">
+          <label>Simple Report</label><input id="simpleTemplate" class="auto" readonly>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const troubleLists = {
+  "20260924": [
+    {
+      id:"A",
+      no:"1258",
+      machine:"OFX-300E-01",
+      trouble:"Main Unit Alarm",
+      category:"F-REX300E/EAC300bi-hv",
+      env:"300E",
+      location:"FAB1 / Area-A"
+    },
+    {
+      id:"B",
+      no:"1259",
+      machine:"OBE-002",
+      trouble:"Bevel Sensor Error",
+      category:"F-REX300E/EAC300bi-hv",
+      env:"BEVEL",
+      location:"FAB1 / Bevel Area"
+    },
+    {
+      id:"C",
+      no:"1260",
+      machine:"OFX-300X-03",
+      trouble:"Pressure Low",
+      category:"F-REX300X",
+      env:"300X",
+      location:"FAB2 / Area-C"
+    }
+  ],
+  "20260923": [
+    {
+      id:"D",
+      no:"1249",
+      machine:"OFX-300X-02",
+      trouble:"Robot Alarm",
+      category:"F-REX300X",
+      env:"300X",
+      location:"FAB2 / Area-B"
+    },
+    {
+      id:"E",
+      no:"1250",
+      machine:"OBE-004",
+      trouble:"Edge Unit Error",
+      category:"F-REX300E/EAC300bi-hv",
+      env:"BEVEL",
+      location:"FAB1 / Bevel Area"
+    }
+  ]
+};
+
+const fileSelect = document.getElementById("fileSelect");
+const jobSelect = document.getElementById("jobSelect");
+const candidate = document.getElementById("candidate");
+const loadBtn = document.getElementById("loadBtn");
+const demoBtn = document.getElementById("demoBtn");
+
+fileSelect.addEventListener("change", () => {
+  const key = fileSelect.value;
+  jobSelect.innerHTML = "";
+  loadBtn.disabled = true;
+  document.getElementById("baseCard").classList.add("hidden");
+
+  if (!key) {
+    jobSelect.disabled = true;
+    jobSelect.innerHTML = '<option value="">먼저 Trouble List를 선택하십시오</option>';
+    candidate.innerHTML = "Trouble List를 선택하면 작업 후보가 표시됩니다.";
+    document.getElementById("fileStatus").textContent = "대기";
+    document.getElementById("jobStatus").textContent = "대기";
+    return;
+  }
+
+  const rows = troubleLists[key];
+
+  const first = document.createElement("option");
+  first.value = "";
+  first.textContent = "작업을 선택하십시오";
+  jobSelect.appendChild(first);
+
+  rows.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r.id;
+    opt.textContent = `No.${r.no} | ${r.machine} | ${r.trouble}`;
+    jobSelect.appendChild(opt);
+  });
+
+  jobSelect.disabled = false;
+  document.getElementById("fileStatus").textContent = "선택됨";
+  document.getElementById("fileStatus").className = "badge ok";
+  document.getElementById("jobStatus").textContent = `${rows.length}건`;
+
+  candidate.innerHTML =
+    `<b>全棟一覧 작업 후보 ${rows.length}건을 불러왔습니다.</b><br><br>` +
+    rows.map(r => `• No.${r.no} / ${r.machine} / ${r.trouble}`).join("<br>");
+});
+
+jobSelect.addEventListener("change", () => {
+  const job = getJob();
+  loadBtn.disabled = !job;
+
+  if (!job) {
+    candidate.innerHTML = "作業選択에서 작업을 하나 선택하십시오.";
+    return;
+  }
+
+  candidate.innerHTML = `
+    <table>
+      <tr><th>No.</th><td>${job.no}</td></tr>
+      <tr><th>装置ID</th><td>${job.machine}</td></tr>
+      <tr><th>トラブル名</th><td>${job.trouble}</td></tr>
+      <tr><th>全棟一覧分類</th><td>${job.category}</td></tr>
+      <tr><th>자동 판정</th><td>${job.env === "BEVEL" ? "Bevel" : job.env}</td></tr>
+    </table>
+    <div style="margin-top:10px;color:#667085;font-size:12px">
+      아직 적용 전입니다. 「이 작업 불러오기」를 누르면 기본정보에 반영됩니다.
+    </div>`;
+});
+
+loadBtn.addEventListener("click", () => {
+  const job = getJob();
+  if (!job) return;
+
+  document.getElementById("vNo").textContent = job.no;
+  document.getElementById("vMachine").textContent = job.machine;
+  document.getElementById("vTrouble").textContent = job.trouble;
+  document.getElementById("vCategory").textContent = job.category;
+  document.getElementById("vEnv").textContent = job.env === "BEVEL" ? "Bevel" : job.env;
+
+  document.getElementById("workTitle").value = job.trouble;
+  document.getElementById("workLocation").value = job.location;
+
+  const map = {
+    "300X": ["KY_300X", "Simp_STD"],
+    "300E": ["KY_300E", "Simp_STD"],
+    "BEVEL": ["KY_BEVEL", "Simp_Bevel"],
+    "OTHER": ["KY_OTHER", "Simp_STD"]
+  };
+  document.getElementById("kyTemplate").value = map[job.env][0];
+  document.getElementById("simpleTemplate").value = map[job.env][1];
+
+  document.getElementById("baseCard").classList.remove("hidden");
+  document.querySelectorAll(".step")[0].classList.remove("active");
+  document.querySelectorAll(".step")[1].classList.add("active");
+  window.scrollTo({top: document.getElementById("baseCard").offsetTop - 20, behavior:"smooth"});
+});
+
+demoBtn.addEventListener("click", () => {
+  fileSelect.value = "20260924";
+  fileSelect.dispatchEvent(new Event("change"));
+  jobSelect.value = "B";
+  jobSelect.dispatchEvent(new Event("change"));
+});
+
+function getJob() {
+  const key = fileSelect.value;
+  const id = jobSelect.value;
+  if (!key || !id) return null;
+  return troubleLists[key].find(r => r.id === id) || null;
+}
+</script>
+</body>
+</html>
